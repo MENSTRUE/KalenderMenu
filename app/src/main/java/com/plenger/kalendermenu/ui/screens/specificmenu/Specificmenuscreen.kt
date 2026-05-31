@@ -20,11 +20,15 @@ import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -41,8 +45,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.plenger.kalendermenu.ui.components.KmCard
-import com.plenger.kalendermenu.ui.components.KmPrimaryButton
-import com.plenger.kalendermenu.ui.components.KmSecondaryButton
 import com.plenger.kalendermenu.ui.components.KmTopBar
 import com.plenger.kalendermenu.ui.navigation.Screen
 import com.plenger.kalendermenu.ui.screens.dashboard.formatRupiah
@@ -79,8 +81,8 @@ fun SpecificMenuScreen(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    KmPrimaryButton(
-                        text = "Pasang Pengingat Kalender",
+                    // Tombol Pasang Pengingat Kalender (Sudah Putih)
+                    Button(
                         onClick = {
                             navController.navigate(
                                 Screen.CalendarReminder.createRoute(
@@ -89,13 +91,55 @@ fun SpecificMenuScreen(
                                 )
                             )
                         },
-                        icon = Icons.Default.DateRange
-                    )
-                    KmSecondaryButton(
-                        text = "Kirim ke Supplier",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = TealPrimary
+                        ),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.DateRange,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = NeutralWhite
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "Pasang Pengingat Kalender",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = NeutralWhite
+                        )
+                    }
+
+                    // Tombol Kirim ke Supplier (Sudah Dirapikan)
+                    OutlinedButton(
                         onClick = { navController.navigate(Screen.SendToSupplier.createRoute(orderId)) },
-                        icon = Icons.Default.ChatBubble
-                    )
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = TealPrimary
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, TealPrimary),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.ChatBubble,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = TealPrimary
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "Kirim ke Supplier",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TealPrimary
+                        )
+                    }
                 }
             }
         }
@@ -219,12 +263,41 @@ private fun SearchCard(
             )
         )
         Spacer(Modifier.height(12.dp))
-        KmPrimaryButton(
-            text = "Cari Menu",
+
+        // PERBAIKAN: Tombol Cari Menu dirubah ke standar agar bisa dikunci ke warna putih
+        Button(
             onClick = onSearch,
-            icon = Icons.Default.Search,
-            isLoading = isLoading
-        )
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = TealPrimary // Warna hijau tosca
+            ),
+            shape = RoundedCornerShape(16.dp),
+            enabled = !isLoading // Cegah klik berulang saat loading
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = NeutralWhite,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Icon(
+                    Icons.Default.Search,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = NeutralWhite // Memaksa Ikon jadi putih
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "Cari Menu",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = NeutralWhite // Memaksa Teks jadi putih
+                )
+            }
+        }
     }
 }
 

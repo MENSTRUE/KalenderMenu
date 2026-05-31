@@ -23,6 +23,8 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -50,7 +52,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.plenger.kalendermenu.ui.components.KmBottomNavBar
 import com.plenger.kalendermenu.ui.components.KmPriceTrendBadge
-import com.plenger.kalendermenu.ui.components.KmPrimaryButton
 import com.plenger.kalendermenu.ui.components.KmTopBar
 import com.plenger.kalendermenu.ui.screens.dashboard.formatRupiah
 import com.plenger.kalendermenu.ui.theme.NeutralBackground
@@ -125,11 +126,34 @@ fun UpdateIngredientPriceScreen(
                     .background(NeutralWhite)
                     .padding(16.dp)
             ) {
-                KmPrimaryButton(
-                    text = "Simpan & Hitung Ulang HPP",
+                // PERBAIKAN DI SINI:
+                // Tombol diganti menjadi Button bawaan Compose.
+                // Teks diganti dari "Simpan & Hitung Ulang HPP" menjadi "Simpan Dan Hitung Ulang HPP"
+                // Warna teks dan ikon ditembak langsung jadi putih (NeutralWhite)
+                Button(
                     onClick = { navController.popBackStack() },
-                    icon = Icons.Default.Save
-                )
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = TealPrimary
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Save,
+                        contentDescription = null,
+                        tint = NeutralWhite, // Ikon dipaksa putih
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Simpan Dan Hitung Ulang HPP", // Teks disesuaikan
+                        color = NeutralWhite, // Teks dipaksa putih
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         }
     ) { innerPadding ->
@@ -367,7 +391,13 @@ fun IngredientPriceListScreen(navController: NavController) {
                             FilterChip(
                                 selected = isSelected,
                                 onClick = { selectedCategory.value = cat },
-                                label = { Text(cat, fontSize = 14.sp) },
+                                label = {
+                                    Text(
+                                        text = cat,
+                                        fontSize = 14.sp,
+                                        color = if (isSelected) NeutralWhite else NeutralDarkGray
+                                    )
+                                },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = TealPrimary,
                                     selectedLabelColor = NeutralWhite,
@@ -398,11 +428,30 @@ fun IngredientPriceListScreen(navController: NavController) {
             item {
                 Spacer(Modifier.height(8.dp))
                 Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    KmPrimaryButton(
-                        text = "Update Harga dari Supplier",
+                    Button(
                         onClick = { navController.navigate("update_price/1") },
-                        icon = Icons.Default.Edit
-                    )
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(50),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = TealPrimary
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = null,
+                            tint = NeutralWhite,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Update Harga Dari Supplier",
+                            color = NeutralWhite,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }

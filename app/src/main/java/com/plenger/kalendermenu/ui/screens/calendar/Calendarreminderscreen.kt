@@ -1,5 +1,6 @@
 package com.plenger.kalendermenu.ui.screens.calendar
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,10 +20,13 @@ import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,8 +38,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.plenger.kalendermenu.ui.components.KmPrimaryButton
-import com.plenger.kalendermenu.ui.components.KmSecondaryButton
 import com.plenger.kalendermenu.ui.components.KmTopBar
 import com.plenger.kalendermenu.ui.navigation.Screen
 import com.plenger.kalendermenu.ui.theme.NeutralBackground
@@ -64,20 +66,60 @@ fun CalendarReminderScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                KmPrimaryButton(
-                    text = "Kembali ke Beranda",
+                // PERBAIKAN 1: Tombol Kembali ke Beranda diganti agar teks dan ikon pasti putih
+                Button(
                     onClick = {
                         navController.navigate(Screen.Dashboard.route) {
                             popUpTo(Screen.Dashboard.route) { inclusive = true }
                         }
                     },
-                    icon = Icons.Default.Home
-                )
-                KmSecondaryButton(
-                    text = "Kirim ke Supplier",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = TealPrimary
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Home,
+                        contentDescription = null,
+                        tint = NeutralWhite, // Ikon dipaksa putih
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Kembali ke Beranda",
+                        color = NeutralWhite, // Teks dipaksa putih
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                // PERBAIKAN 2: Tombol Kirim ke Supplier sekalian dirapikan posisi ikonnya
+                OutlinedButton(
                     onClick = { navController.navigate(Screen.SendToSupplier.createRoute(orderId)) },
-                    icon = Icons.Default.ChatBubble
-                )
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, TealPrimary),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = TealPrimary // Warna teks dan ikon jadi Teal
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ChatBubble,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Kirim ke Supplier",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         }
     ) { innerPadding ->

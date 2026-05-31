@@ -40,7 +40,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.plenger.kalendermenu.ui.components.KmBottomNavBar
-import com.plenger.kalendermenu.ui.components.KmDateBadge
 import com.plenger.kalendermenu.ui.components.KmSectionHeader
 import com.plenger.kalendermenu.ui.components.KmTopBar
 import com.plenger.kalendermenu.ui.navigation.Screen
@@ -116,7 +115,7 @@ fun DashboardScreen(
                 Spacer(Modifier.height(20.dp))
                 KmSectionHeader(
                     title = "Jadwal Minggu Ini",
-                    actionText = "Lihat Semua →",
+                    actionText = "Lihat Semua ",
                     onActionClick = { navController.navigate(Screen.AllOrders.route) }
                 )
                 Spacer(Modifier.height(8.dp))
@@ -205,7 +204,7 @@ private fun UpcomingOrderCard(
                         )
                     }
                     Text(
-                        text = "Lihat Detail →",
+                        text = "Lihat Detail ",
                         color = TealContainer,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium
@@ -313,8 +312,11 @@ private fun WeeklyScheduleItem(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            KmDateBadge(dayLabel = order.dayLabel, dayNumber = order.dayNumber)
+            // Memanggil CustomDateBadge yang dibuat khusus di file ini
+            CustomDateBadge(dayLabel = order.dayLabel, dayNumber = order.dayNumber)
+
             Spacer(Modifier.width(14.dp))
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(order.customerName, fontWeight = FontWeight.Bold, fontSize = 17.sp, color = NeutralBlack)
                 Spacer(Modifier.height(2.dp))
@@ -335,6 +337,34 @@ private fun WeeklyScheduleItem(
                     )
             )
         }
+    }
+}
+
+// Ini adalah komponen custom pengganti KmDateBadge khusus untuk mengatasi masalah UI kamu
+@Composable
+private fun CustomDateBadge(dayLabel: String, dayNumber: String) {
+    Column(
+        modifier = Modifier
+            .width(52.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(TealPrimary) // Menggunakan warna hijau tosca yang sama dengan desain
+            .padding(vertical = 10.dp), // Ini yang bikin kotak melebar simetris ke atas dan bawah
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = dayLabel,
+            color = NeutralWhite, // Teks hari (SEL, RAB) diubah paksa jadi putih
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = dayNumber,
+            color = NeutralWhite, // Teks angka diubah jadi putih
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 

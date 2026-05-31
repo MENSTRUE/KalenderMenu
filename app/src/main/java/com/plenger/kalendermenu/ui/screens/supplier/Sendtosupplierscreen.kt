@@ -24,6 +24,8 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Receipt
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -119,21 +121,26 @@ fun SendToSupplierScreen(
                         context.startActivity(intent)
                     }
                 )
-                TextButton(
-                    onClick = {
-                        clipboardManager.setText(AnnotatedString(draftMessage))
-                        showCopiedSnack = true
-                    },
-                    modifier = Modifier.fillMaxWidth()
+
+                // PERBAIKAN: Font size dinaikkan menjadi 16.sp agar simetris dengan tombol lainnya
+                Button(
+                    onClick = { navController.popBackStack() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = TealPrimary
+                    ),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
                     Text(
-                        "Salin Teks Saja",
-                        color = TealPrimary,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp,
-                        textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                        text = "Kembali",
+                        color = NeutralWhite,
+                        fontSize = 20.sp, // Ukuran diperbesar dari 14.sp ke 16.sp
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
+
                 KmSecondaryButton(
                     text = "Update Harga dari Supplier",
                     onClick = { navController.navigate(Screen.UpdateIngredientPrice.createRoute(1L)) },
@@ -176,11 +183,34 @@ fun SendToSupplierScreen(
                     )
                 }
                 Spacer(Modifier.height(10.dp))
-                Text(
-                    "Dibuat otomatis · KalenderMenu",
-                    fontSize = 12.sp,
-                    color = NeutralLightGray
-                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Dibuat otomatis · KalenderMenu",
+                        fontSize = 12.sp,
+                        color = NeutralLightGray
+                    )
+
+                    TextButton(
+                        onClick = {
+                            clipboardManager.setText(AnnotatedString(draftMessage))
+                            showCopiedSnack = true
+                        },
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Text(
+                            "Salin Teks Saja",
+                            color = TealPrimary,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp,
+                            textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                        )
+                    }
+                }
             }
 
             KmCard {

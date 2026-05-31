@@ -24,6 +24,8 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Restaurant
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -48,7 +50,6 @@ import androidx.navigation.NavController
 import com.plenger.kalendermenu.ui.components.KmBottomNavBar
 import com.plenger.kalendermenu.ui.components.KmCard
 import com.plenger.kalendermenu.ui.components.KmOrderStatusChip
-import com.plenger.kalendermenu.ui.components.KmPrimaryButton
 import com.plenger.kalendermenu.ui.components.KmSecondaryButton
 import com.plenger.kalendermenu.ui.components.KmTopBar
 import com.plenger.kalendermenu.ui.navigation.Screen
@@ -135,7 +136,13 @@ fun AllOrdersScreen(navController: NavController) {
                             FilterChip(
                                 selected = isSelected,
                                 onClick = { selectedFilter = f },
-                                label = { Text(f, fontSize = 14.sp) },
+                                label = {
+                                    Text(
+                                        text = f,
+                                        fontSize = 14.sp,
+                                        color = if (isSelected) NeutralWhite else NeutralDarkGray
+                                    )
+                                },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = TealPrimary,
                                     selectedLabelColor = NeutralWhite,
@@ -217,7 +224,7 @@ private fun OrderCard(order: OrderSummary, onClick: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("HPP: Rp ${formatRupiah(order.hpp)}", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = NeutralBlack)
-                Text("Detail →", fontSize = 14.sp, color = TealPrimary, fontWeight = FontWeight.Medium)
+                Text("Detail ", fontSize = 14.sp, color = TealPrimary, fontWeight = FontWeight.Medium)
             }
         }
     }
@@ -239,11 +246,32 @@ fun OrderDetailScreen(navController: NavController, orderId: Long) {
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                KmPrimaryButton(
-                    text = "Kirim ke Supplier",
+                Button(
                     onClick = { navController.navigate(Screen.SendToSupplier.createRoute(orderId)) },
-                    icon = Icons.Default.ChatBubble
-                )
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = TealPrimary // Warna latar tombol (hijau tosca)
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    // PERBAIKAN: Tembak warna putih langsung di Icon dan Text
+                    Icon(
+                        Icons.Default.ChatBubble,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = NeutralWhite // Memaksa Ikon jadi putih
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "Kirim Ke Supplier",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = NeutralWhite // Memaksa Teks jadi putih
+                    )
+                }
+
                 KmSecondaryButton(
                     text = "Pasang Pengingat Kalender",
                     onClick = { navController.navigate(Screen.CalendarReminder.createRoute(orderId, order.menuName)) },

@@ -23,9 +23,11 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -50,7 +52,6 @@ import androidx.navigation.NavController
 import com.plenger.kalendermenu.ui.components.KmAiBadge
 import com.plenger.kalendermenu.ui.components.KmCard
 import com.plenger.kalendermenu.ui.components.KmIngredientChip
-import com.plenger.kalendermenu.ui.components.KmOrangeButton
 import com.plenger.kalendermenu.ui.components.KmTopBar
 import com.plenger.kalendermenu.ui.navigation.Screen
 import com.plenger.kalendermenu.ui.screens.dashboard.formatRupiah
@@ -205,12 +206,41 @@ private fun BudgetInputCard(
             textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(14.dp))
-        KmOrangeButton(
-            text = "Cari Menu Terbaik",
+
+        // PERBAIKAN: Tombol diganti menjadi Button bawaan dengan warna teks paksa putih
+        Button(
             onClick = onSearch,
-            icon = Icons.Default.AutoAwesome,
-            isLoading = isLoading
-        )
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = OrangeAI // Latar belakang oranye
+            ),
+            shape = RoundedCornerShape(16.dp),
+            enabled = !isLoading
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = NeutralWhite,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Icon(
+                    Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = NeutralWhite // Memaksa Ikon jadi putih
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "Cari Menu Terbaik",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = NeutralWhite // Memaksa Teks jadi putih
+                )
+            }
+        }
     }
 }
 
@@ -291,7 +321,7 @@ private fun RecommendationCard(
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = TealPrimary),
                 border = androidx.compose.foundation.BorderStroke(1.5.dp, TealPrimary)
             ) {
-                Text("Pilih Menu Ini →", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                Text("Pilih Menu Ini ", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
             }
         }
     }
