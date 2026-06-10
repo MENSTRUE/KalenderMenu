@@ -1,9 +1,16 @@
 package com.plenger.kalendermenu.ui.navigation
 
 sealed class Screen(val route: String) {
+
+    // ── Entry screens ─────────────────────────────────────────────
+    data object Splash : Screen("splash")
+    data object Login  : Screen("login")
+
+    // ── Main screens ──────────────────────────────────────────────
     data object Dashboard : Screen("dashboard")
     data object AllOrders : Screen("all_orders")
-    data object NewOrder : Screen("new_order")
+    data object NewOrder  : Screen("new_order")
+
     data object SpecificMenu : Screen("specific_menu/{orderId}") {
         fun createRoute(orderId: Long) = "specific_menu/$orderId"
     }
@@ -20,7 +27,8 @@ sealed class Screen(val route: String) {
         fun createRoute(recipeId: Long) = "update_price/$recipeId"
     }
     data object IngredientPriceList : Screen("ingredient_price_list")
-    data object Profile : Screen("profile")
+    data object Profile             : Screen("profile")
+
     data object OrderDetail : Screen("order_detail/{orderId}") {
         fun createRoute(orderId: Long) = "order_detail/$orderId"
     }

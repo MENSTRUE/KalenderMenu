@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -30,22 +32,25 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -53,6 +58,7 @@ import androidx.navigation.NavController
 import com.plenger.kalendermenu.ui.components.KmBottomNavBar
 import com.plenger.kalendermenu.ui.components.KmPriceTrendBadge
 import com.plenger.kalendermenu.ui.components.KmTopBar
+import com.plenger.kalendermenu.ui.navigation.Screen
 import com.plenger.kalendermenu.ui.screens.dashboard.formatRupiah
 import com.plenger.kalendermenu.ui.theme.NeutralBackground
 import com.plenger.kalendermenu.ui.theme.NeutralBlack
@@ -63,51 +69,69 @@ import com.plenger.kalendermenu.ui.theme.NeutralMidGray
 import com.plenger.kalendermenu.ui.theme.NeutralWhite
 import com.plenger.kalendermenu.ui.theme.OrangeAI
 import com.plenger.kalendermenu.ui.theme.OrangeAILight
-import com.plenger.kalendermenu.ui.theme.StatusGreen
 import com.plenger.kalendermenu.ui.theme.StatusOrange
 import com.plenger.kalendermenu.ui.theme.TealPrimary
 
+// ─── Data model ───────────────────────────────────────────────────
 data class IngredientPriceEntry(
     val name: String,
     val unit: String,
     val currentPrice: Long,
-    val priceDelta: Long
+    val priceDelta: Long,
+    val category: String = "Lainnya"
 )
 
+// ─── Master data dengan kategori ─────────────────────────────────
+private val masterIngredients = listOf(
+    IngredientPriceEntry("Daging Sapi",   "per kg",    130000L, 5000L, "Daging"),
+    IngredientPriceEntry("Ayam Potong",   "per kg",     35000L,    0L, "Daging"),
+    IngredientPriceEntry("Beras",         "per kg",     14000L,    0L, "Lainnya"),
+    IngredientPriceEntry("Cabai Merah",   "per kg",     45000L, 8000L, "Bumbu"),
+    IngredientPriceEntry("Santan",        "per liter",  18000L,    0L, "Lainnya"),
+    IngredientPriceEntry("Minyak Goreng", "per liter",  16000L,    0L, "Lainnya"),
+    IngredientPriceEntry("Bawang Merah",  "per kg",     32000L, 2000L, "Bumbu"),
+    IngredientPriceEntry("Bawang Putih",  "per kg",     28000L,    0L, "Bumbu"),
+    IngredientPriceEntry("Wortel",        "per kg",     10000L,    0L, "Sayur"),
+    IngredientPriceEntry("Bayam",         "per ikat",    3000L,    0L, "Sayur"),
+)
+
+// ─────────────────────────────────────────────────────────────────
+// SCREEN: Update Ingredient Price
+// ─────────────────────────────────────────────────────────────────
 @Composable
 fun UpdateIngredientPriceScreen(
     navController: NavController,
-    recipeId: Long
+    recipeId: Long = 1L
 ) {
     val ingredients = remember {
         mutableStateListOf(
-            IngredientPriceEntry("Daging Sapi", "5 kg", 130000, 5000),
-            IngredientPriceEntry("Santan", "3 ltr", 18000, 0),
-            IngredientPriceEntry("Cabai Merah", "500gr", 45000, 8000),
-            IngredientPriceEntry("Serai", "10 btg", 5000, 0),
-            IngredientPriceEntry("Lengkuas", "200gr", 12000, 0),
-            IngredientPriceEntry("Bawang Merah", "300gr", 22000, 2000)
+            IngredientPriceEntry("Daging Sapi",  "5 kg",   130000, 5000),
+            IngredientPriceEntry("Santan",       "3 ltr",   18000,    0),
+            IngredientPriceEntry("Cabai Merah",  "500gr",   45000, 8000),
+            IngredientPriceEntry("Serai",        "10 btg",   5000,    0),
+            IngredientPriceEntry("Lengkuas",     "200gr",   12000,    0),
+            IngredientPriceEntry("Bawang Merah", "300gr",   22000, 2000)
         )
     }
     val prices = remember { ingredients.map { it.currentPrice.toString() }.toMutableStateList() }
     val oldHpp = 875000L
     val newHpp by remember(prices) {
         derivedStateOf {
-            val total = prices.mapIndexed { i, p ->
+            prices.mapIndexed { i, p ->
                 val base = p.toLongOrNull() ?: ingredients[i].currentPrice
                 when (i) {
-                    0 -> base * 5
-                    1 -> base * 3
-                    2 -> (base * 0.5).toLong()
-                    3 -> base * 10
-                    4 -> (base * 0.2).toLong()
-                    5 -> (base * 0.3).toLong()
+                    0    -> base * 5
+                    1    -> base * 3
+                    2    -> (base * 0.5).toLong()
+                    3    -> base * 10
+                    4    -> (base * 0.2).toLong()
+                    5    -> (base * 0.3).toLong()
                     else -> base
                 }
             }.sum()
-            total
         }
     }
+    val diff = newHpp - oldHpp
 
     Scaffold(
         containerColor = NeutralBackground,
@@ -126,30 +150,17 @@ fun UpdateIngredientPriceScreen(
                     .background(NeutralWhite)
                     .padding(16.dp)
             ) {
-                // PERBAIKAN DI SINI:
-                // Tombol diganti menjadi Button bawaan Compose.
-                // Teks diganti dari "Simpan & Hitung Ulang HPP" menjadi "Simpan Dan Hitung Ulang HPP"
-                // Warna teks dan ikon ditembak langsung jadi putih (NeutralWhite)
                 Button(
                     onClick = { navController.popBackStack() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = TealPrimary
-                    )
+                    colors = ButtonDefaults.buttonColors(containerColor = TealPrimary)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Save,
-                        contentDescription = null,
-                        tint = NeutralWhite, // Ikon dipaksa putih
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(Icons.Default.Save, null, tint = NeutralWhite, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text(
-                        text = "Simpan Dan Hitung Ulang HPP", // Teks disesuaikan
-                        color = NeutralWhite, // Teks dipaksa putih
+                        "Simpan & Hitung Ulang HPP",
+                        color = NeutralWhite,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -158,12 +169,11 @@ fun UpdateIngredientPriceScreen(
         }
     ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
+            modifier = Modifier.fillMaxSize().padding(innerPadding),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(0.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Info banner
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -171,8 +181,11 @@ fun UpdateIngredientPriceScreen(
                     colors = CardDefaults.cardColors(containerColor = OrangeAILight),
                     border = androidx.compose.foundation.BorderStroke(1.dp, OrangeAI.copy(alpha = 0.4f))
                 ) {
-                    Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.Info, contentDescription = null, tint = OrangeAI, modifier = Modifier.size(20.dp))
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Outlined.Info, null, tint = OrangeAI, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(10.dp))
                         Text(
                             "Masukkan harga terbaru dari supplier. HPP dihitung ulang otomatis.",
@@ -182,48 +195,107 @@ fun UpdateIngredientPriceScreen(
                         )
                     }
                 }
-                Spacer(Modifier.height(16.dp))
+            }
+
+            // Section label
+            item {
                 Text(
                     "Bahan Baku — Rendang Sapi (50 porsi)",
                     fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = NeutralBlack
+                    fontSize = 15.sp,
+                    color = NeutralBlack,
+                    modifier = Modifier.padding(vertical = 4.dp)
                 )
-                Spacer(Modifier.height(12.dp))
             }
 
-            items(ingredients.indices.toList()) { i ->
-                val ing = ingredients[i]
-                PriceInputRow(
-                    name = ing.name,
-                    unit = ing.unit,
-                    price = prices[i],
-                    delta = ing.priceDelta,
+            // Ingredient rows — pakai itemsIndexed dari LazyListScope
+            itemsIndexed(ingredients) { i, ing ->
+                IngredientPriceRow(
+                    entry = ing,
+                    priceInput = prices[i],
                     onPriceChange = { prices[i] = it }
                 )
-                Spacer(Modifier.height(10.dp))
             }
 
+            // HPP comparison card
             item {
-                Spacer(Modifier.height(8.dp))
-                HppComparisonCard(oldHpp = oldHpp, newHpp = newHpp)
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(4.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = NeutralWhite),
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, TealPrimary),
+                    elevation = CardDefaults.cardElevation(1.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            "Perbandingan HPP",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = NeutralBlack
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("HPP Lama", fontSize = 14.sp, color = NeutralMidGray)
+                            Text(
+                                "Rp ${formatRupiah(oldHpp)}",
+                                fontSize = 14.sp,
+                                color = NeutralMidGray,
+                                textDecoration = TextDecoration.LineThrough
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "HPP Baru",
+                                fontSize = 14.sp,
+                                color = TealPrimary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                "Rp ${formatRupiah(newHpp)}",
+                                fontSize = 22.sp,
+                                color = TealPrimary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        if (diff != 0L) {
+                            Text(
+                                text = if (diff > 0)
+                                    "Selisih +Rp ${formatRupiah(diff)} dari estimasi awal"
+                                else
+                                    "Selisih -Rp ${formatRupiah(-diff)} dari estimasi awal",
+                                fontSize = 13.sp,
+                                color = if (diff > 0) StatusOrange else TealPrimary
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 }
 
+// ─────────────────────────────────────────────────────────────────
+// Ingredient price row composable
+// ─────────────────────────────────────────────────────────────────
 @Composable
-private fun PriceInputRow(
-    name: String,
-    unit: String,
-    price: String,
-    delta: Long,
+private fun IngredientPriceRow(
+    entry: IngredientPriceEntry,
+    priceInput: String,
     onPriceChange: (String) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = NeutralWhite),
         elevation = CardDefaults.cardElevation(1.dp)
     ) {
@@ -231,26 +303,33 @@ private fun PriceInputRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(name, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = NeutralBlack)
-                Text(unit, fontSize = 13.sp, color = NeutralMidGray)
+                Text(
+                    entry.name,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    color = NeutralBlack
+                )
+                Text(entry.unit, fontSize = 12.sp, color = NeutralMidGray)
             }
-            Spacer(Modifier.width(10.dp))
-            KmPriceTrendBadge(delta = delta)
-            Spacer(Modifier.width(10.dp))
+            KmPriceTrendBadge(delta = entry.priceDelta)
             OutlinedTextField(
-                value = price,
-                onValueChange = { if (it.all { c -> c.isDigit() } && it.length <= 8) onPriceChange(it) },
-                modifier = Modifier.width(110.dp),
-                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = NeutralBlack,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.End
-                ),
+                value = priceInput,
+                onValueChange = { v ->
+                    if (v.all { c -> c.isDigit() } && v.length <= 9) onPriceChange(v)
+                },
+                modifier = Modifier.width(110.dp).height(56.dp),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
+                textStyle = TextStyle(
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = NeutralBlack,
+                    textAlign = TextAlign.End
+                ),
                 shape = RoundedCornerShape(10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = TealPrimary,
@@ -261,73 +340,31 @@ private fun PriceInputRow(
     }
 }
 
+// ─────────────────────────────────────────────────────────────────
+// SCREEN: Ingredient Price List
+// ─────────────────────────────────────────────────────────────────
 @Composable
-private fun HppComparisonCard(oldHpp: Long, newHpp: Long) {
-    val diff = newHpp - oldHpp
-    val isUp = diff > 0
+fun IngredientPriceListScreen(navController: NavController) {
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = NeutralWhite),
-        elevation = CardDefaults.cardElevation(1.dp),
-        border = androidx.compose.foundation.BorderStroke(1.5.dp, TealPrimary.copy(alpha = 0.3f))
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("Perbandingan HPP", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = NeutralBlack)
-            Spacer(Modifier.height(14.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("HPP Lama", fontSize = 15.sp, color = NeutralMidGray)
-                Text(
-                    "Rp ${formatRupiah(oldHpp)}",
-                    fontSize = 15.sp,
-                    color = NeutralLightGray,
-                    textDecoration = TextDecoration.LineThrough
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("HPP Baru", fontSize = 16.sp, color = TealPrimary, fontWeight = FontWeight.SemiBold)
-                Text(
-                    "Rp ${formatRupiah(newHpp)}",
-                    fontSize = 22.sp,
-                    color = NeutralBlack,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            if (diff != 0L) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "${if (isUp) "Selisih +Rp" else "Hemat Rp"} ${formatRupiah(Math.abs(diff))} dari estimasi awal",
-                    fontSize = 13.sp,
-                    color = if (isUp) StatusOrange else StatusGreen
-                )
+    var searchQuery      by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf("Semua") }
+    val categories = listOf("Semua", "Daging", "Sayur", "Bumbu")
+
+    var ingredients  by remember { mutableStateOf(masterIngredients) }
+    var lastUpdated  by remember { mutableStateOf("Hari ini · 08:30 WIB") }
+    var showReloadDialog by remember { mutableStateOf(false) }
+
+    val filteredList by remember(searchQuery, selectedCategory, ingredients) {
+        derivedStateOf {
+            ingredients.filter { ing ->
+                val matchSearch   = searchQuery.isBlank() ||
+                    ing.name.contains(searchQuery, ignoreCase = true)
+                val matchCategory = selectedCategory == "Semua" ||
+                    ing.category == selectedCategory
+                matchSearch && matchCategory
             }
         }
     }
-}
-
-@Composable
-fun IngredientPriceListScreen(navController: NavController) {
-    val ingredients = listOf(
-        Triple("Daging Sapi", "per kg", 130000L to 5000L),
-        Triple("Ayam Potong", "per kg", 35000L to 0L),
-        Triple("Beras", "per kg", 14000L to 0L),
-        Triple("Cabai Merah", "per kg", 45000L to 8000L),
-        Triple("Santan", "per liter", 18000L to 0L),
-        Triple("Minyak Goreng", "per liter", 16000L to 0L),
-        Triple("Bawang Merah", "per kg", 32000L to 2000L),
-    )
-    val selectedCategory = remember { mutableStateOf("Semua") }
-    val categories = listOf("Semua", "Daging", "Sayur", "Bumbu")
 
     Scaffold(
         containerColor = NeutralBackground,
@@ -336,15 +373,15 @@ fun IngredientPriceListScreen(navController: NavController) {
                 title = "Harga Bahan Pasar",
                 onMenuClick = {},
                 actionIcon = Icons.Default.Refresh,
-                onActionClick = {}
+                onActionClick = { showReloadDialog = true }
             )
         },
         bottomBar = {
             KmBottomNavBar(
-                selectedRoute = "ingredient_price_list",
+                selectedRoute = Screen.IngredientPriceList.route,
                 onItemSelected = { route ->
                     navController.navigate(route) {
-                        popUpTo("dashboard") { saveState = true }
+                        popUpTo(Screen.Dashboard.route) { saveState = true }
                         launchSingleTop = true
                         restoreState = true
                     }
@@ -353,9 +390,7 @@ fun IngredientPriceListScreen(navController: NavController) {
         }
     ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
+            modifier = Modifier.fillMaxSize().padding(innerPadding),
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
             item {
@@ -364,18 +399,18 @@ fun IngredientPriceListScreen(navController: NavController) {
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Diperbarui: Hari ini · 08:30 WIB", fontSize = 12.sp, color = NeutralMidGray)
+                        Text("Diperbarui: $lastUpdated", fontSize = 12.sp, color = NeutralMidGray)
                         Text("Sumber: Pasar Tradisional", fontSize = 12.sp, color = NeutralMidGray)
                     }
                     Spacer(Modifier.height(12.dp))
+
                     OutlinedTextField(
-                        value = "",
-                        onValueChange = {},
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = { Text("Cari nama bahan...", color = NeutralLightGray) },
-                        leadingIcon = {
-                            Icon(Icons.Default.Search, contentDescription = null, tint = NeutralMidGray)
-                        },
+                        leadingIcon = { Icon(Icons.Default.Search, null, tint = NeutralMidGray) },
+                        singleLine = true,
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = TealPrimary,
@@ -385,15 +420,16 @@ fun IngredientPriceListScreen(navController: NavController) {
                         )
                     )
                     Spacer(Modifier.height(12.dp))
+
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         categories.forEach { cat ->
-                            val isSelected = selectedCategory.value == cat
+                            val isSelected = selectedCategory == cat
                             FilterChip(
                                 selected = isSelected,
-                                onClick = { selectedCategory.value = cat },
+                                onClick = { selectedCategory = cat },
                                 label = {
                                     Text(
-                                        text = cat,
+                                        cat,
                                         fontSize = 14.sp,
                                         color = if (isSelected) NeutralWhite else NeutralDarkGray
                                     )
@@ -413,40 +449,69 @@ fun IngredientPriceListScreen(navController: NavController) {
                             )
                         }
                     }
+
                     Spacer(Modifier.height(12.dp))
-                    Text("Harga Hari Ini", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = NeutralBlack)
+                    Text(
+                        "Harga Hari Ini  (${filteredList.size} bahan)",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = NeutralBlack
+                    )
                     Spacer(Modifier.height(8.dp))
                 }
             }
 
-            items(ingredients) { (name, unit, priceData) ->
-                val (price, delta) = priceData
-                PriceListItem(name = name, unit = unit, price = price, delta = delta)
+            items(filteredList) { ing ->
+                PriceListItem(
+                    name  = ing.name,
+                    unit  = ing.unit,
+                    price = ing.currentPrice,
+                    delta = ing.priceDelta
+                )
                 Spacer(Modifier.height(8.dp))
+            }
+
+            if (filteredList.isEmpty()) {
+                item {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(40.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            "Tidak ditemukan",
+                            fontSize = 16.sp,
+                            color = NeutralMidGray,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "Coba kata kunci atau kategori lain",
+                            fontSize = 14.sp,
+                            color = NeutralLightGray
+                        )
+                    }
+                }
             }
 
             item {
                 Spacer(Modifier.height(8.dp))
                 Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                     Button(
-                        onClick = { navController.navigate("update_price/1") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        shape = RoundedCornerShape(50),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = TealPrimary
-                        )
+                        onClick = {
+                            navController.navigate(Screen.UpdateIngredientPrice.createRoute(1L))
+                        },
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = TealPrimary)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = null,
+                            Icons.Default.Edit,
+                            null,
                             tint = NeutralWhite,
                             modifier = Modifier.size(20.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text(
-                            text = "Update Harga Dari Supplier",
+                            "Update Harga Dari Supplier",
                             color = NeutralWhite,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.SemiBold
@@ -456,14 +521,46 @@ fun IngredientPriceListScreen(navController: NavController) {
             }
         }
     }
+
+    if (showReloadDialog) {
+        AlertDialog(
+            onDismissRequest = { showReloadDialog = false },
+            title = { Text("Perbarui Harga", fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "Mengambil data harga terbaru dari server. Harga akan diperbarui ke data hari ini.",
+                    fontSize = 15.sp,
+                    color = NeutralMidGray
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        ingredients  = masterIngredients.map { it.copy() }
+                        lastUpdated  = "Baru saja diperbarui"
+                        showReloadDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = TealPrimary)
+                ) {
+                    Text("Perbarui", color = NeutralWhite)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showReloadDialog = false }) {
+                    Text("Batal", color = NeutralMidGray)
+                }
+            }
+        )
+    }
 }
 
+// ─────────────────────────────────────────────────────────────────
+// Price list item composable
+// ─────────────────────────────────────────────────────────────────
 @Composable
 private fun PriceListItem(name: String, unit: String, price: Long, delta: Long) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = NeutralWhite),
         elevation = CardDefaults.cardElevation(1.dp)
@@ -477,7 +574,7 @@ private fun PriceListItem(name: String, unit: String, price: Long, delta: Long) 
             Box(
                 modifier = Modifier
                     .size(10.dp)
-                    .background(TealPrimary, shape = RoundedCornerShape(50))
+                    .background(TealPrimary, RoundedCornerShape(50))
             )
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -485,7 +582,12 @@ private fun PriceListItem(name: String, unit: String, price: Long, delta: Long) 
                 Text(unit, fontSize = 13.sp, color = NeutralMidGray)
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text("Rp ${formatRupiah(price)}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = NeutralBlack)
+                Text(
+                    "Rp ${formatRupiah(price)}",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = NeutralBlack
+                )
                 Spacer(Modifier.height(2.dp))
                 KmPriceTrendBadge(delta = delta)
             }

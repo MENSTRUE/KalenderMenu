@@ -1,5 +1,6 @@
 package com.plenger.kalendermenu.ui.screens.orders
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.DateRange
@@ -28,6 +30,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -65,23 +69,41 @@ import com.plenger.kalendermenu.ui.theme.NeutralWhite
 import com.plenger.kalendermenu.ui.theme.TealPrimary
 
 private val mockOrders = listOf(
-    OrderSummary(1L, "Ibu Hartini", "Nasi Gudeg + Ayam Bakar", 50, 875000, "Sel, 24 Juni 2026", "SEL", "24", "konfirmasi"),
-    OrderSummary(2L, "Pak Ahmad", "Nasi Kotak Ayam", 80, 1200000, "Rab, 25 Juni 2026", "RAB", "25", "menunggu"),
-    OrderSummary(3L, "Bu Siti", "Rendang Sapi", 30, 620000, "Jum, 27 Juni 2026", "JUM", "27", "konfirmasi"),
+    OrderSummary(1L, "Ibu Hartini", "Nasi Gudeg + Ayam Bakar", 50, 875000,  "Sel, 24 Juni 2026", "SEL", "24", "konfirmasi"),
+    OrderSummary(2L, "Pak Ahmad",   "Nasi Kotak Ayam",          80, 1200000, "Rab, 25 Juni 2026", "RAB", "25", "menunggu"),
+    OrderSummary(3L, "Bu Siti",     "Rendang Sapi",             30, 620000,  "Jum, 27 Juni 2026", "JUM", "27", "konfirmasi"),
 )
 
 @Composable
 fun AllOrdersScreen(navController: NavController) {
     var selectedFilter by remember { mutableStateOf("Semua") }
     val filters = listOf("Semua", "Minggu Ini", "Bulan Ini", "Selesai")
-    var searchQuery by remember { mutableStateOf("") }
+    var searchQuery     by remember { mutableStateOf("") }
 
-    val filtered = mockOrders.filter { order ->
-        (searchQuery.isBlank() || order.customerName.contains(searchQuery, ignoreCase = true)) &&
-                (selectedFilter == "Semua" ||
-                        (selectedFilter == "Selesai" && order.status == "selesai") ||
-                        (selectedFilter == "Minggu Ini"))
-    }
+    // ✅ FIX: Sort state — Terbaru / Terlama / HPP Tertinggi
+    var sortBy          by remember { mutableStateOf("Terbaru") }
+    var showSortMenu    by remember { mutableStateOf(false) }
+    val sortOptions = listOf("Terbaru", "Terlama", "HPP Tertinggi")
+
+    val filtered = mockOrders
+        .filter { order ->
+            (searchQuery.isBlank() || order.customerName.contains(searchQuery, ignoreCase = true)) &&
+            when (selectedFilter) {
+                "Semua"      -> true
+                "Selesai"    -> order.status == "selesai"
+                "Minggu Ini" -> true   // semua data mock masuk minggu ini
+                "Bulan Ini"  -> true
+                else         -> true
+            }
+        }
+        .let { list ->
+            // ✅ FIX: sort berfungsi
+            when (sortBy) {
+                "Terlama"      -> list.sortedBy { it.id }
+                "HPP Tertinggi"-> list.sortedByDescending { it.hpp }
+                else           -> list.sortedByDescending { it.id }   // Terbaru
+            }
+        }
 
     Scaffold(
         containerColor = NeutralBackground,
@@ -95,10 +117,10 @@ fun AllOrdersScreen(navController: NavController) {
         },
         bottomBar = {
             KmBottomNavBar(
-                selectedRoute = "all_orders",
+                selectedRoute = Screen.AllOrders.route,
                 onItemSelected = { route ->
                     navController.navigate(route) {
-                        popUpTo("dashboard") { saveState = true }
+                        popUpTo(Screen.Dashboard.route) { saveState = true }
                         launchSingleTop = true
                         restoreState = true
                     }
@@ -107,9 +129,7 @@ fun AllOrdersScreen(navController: NavController) {
         }
     ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
+            modifier = Modifier.fillMaxSize().padding(innerPadding),
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
             item {
@@ -119,7 +139,7 @@ fun AllOrdersScreen(navController: NavController) {
                         onValueChange = { searchQuery = it },
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = { Text("Cari nama pelanggan...", color = NeutralLightGray) },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = NeutralMidGray) },
+                        leadingIcon = { Icon(Icons.Default.Search, null, tint = NeutralMidGray) },
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -136,13 +156,7 @@ fun AllOrdersScreen(navController: NavController) {
                             FilterChip(
                                 selected = isSelected,
                                 onClick = { selectedFilter = f },
-                                label = {
-                                    Text(
-                                        text = f,
-                                        fontSize = 14.sp,
-                                        color = if (isSelected) NeutralWhite else NeutralDarkGray
-                                    )
-                                },
+                                label = { Text(f, fontSize = 14.sp, color = if (isSelected) NeutralWhite else NeutralDarkGray) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = TealPrimary,
                                     selectedLabelColor = NeutralWhite,
@@ -165,9 +179,29 @@ fun AllOrdersScreen(navController: NavController) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("${filtered.size} pesanan", fontSize = 14.sp, color = NeutralMidGray)
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Urutkan: Terbaru", fontSize = 14.sp, color = TealPrimary, fontWeight = FontWeight.Medium)
-                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = TealPrimary, modifier = Modifier.size(18.dp))
+
+                        // ✅ FIX: Urutkan dropdown berfungsi
+                        Row(
+                            modifier = Modifier.clickable { showSortMenu = true },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Urutkan: $sortBy", fontSize = 14.sp, color = TealPrimary, fontWeight = FontWeight.Medium)
+                            Icon(Icons.Default.KeyboardArrowDown, null, tint = TealPrimary, modifier = Modifier.size(18.dp))
+                        }
+
+                        DropdownMenu(
+                            expanded = showSortMenu,
+                            onDismissRequest = { showSortMenu = false }
+                        ) {
+                            sortOptions.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option, fontSize = 14.sp) },
+                                    onClick = {
+                                        sortBy = option
+                                        showSortMenu = false
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -186,45 +220,34 @@ fun AllOrdersScreen(navController: NavController) {
 @Composable
 private fun OrderCard(order: OrderSummary, onClick: () -> Unit) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .clickable { onClick() },
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = NeutralWhite),
         elevation = CardDefaults.cardElevation(1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(order.customerName, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = NeutralBlack)
                 KmOrderStatusChip(order.status)
             }
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.DateRange, contentDescription = null, tint = NeutralMidGray, modifier = Modifier.size(16.dp))
+                Icon(Icons.Outlined.DateRange, null, tint = NeutralMidGray, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(5.dp))
                 Text("${order.dateFormatted} · ${order.portions} Porsi", fontSize = 14.sp, color = NeutralMidGray)
             }
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Restaurant, contentDescription = null, tint = TealPrimary, modifier = Modifier.size(16.dp))
+                Icon(Icons.Outlined.Restaurant, null, tint = TealPrimary, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(5.dp))
                 Text(order.menuName, fontSize = 14.sp, color = TealPrimary, fontWeight = FontWeight.Medium)
             }
             Spacer(Modifier.height(12.dp))
             HorizontalDivider(color = NeutralDivider)
             Spacer(Modifier.height(10.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("HPP: Rp ${formatRupiah(order.hpp)}", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = NeutralBlack)
-                Text("Detail ", fontSize = 14.sp, color = TealPrimary, fontWeight = FontWeight.Medium)
+                Text("Detail →", fontSize = 14.sp, color = TealPrimary, fontWeight = FontWeight.Medium)
             }
         }
     }
@@ -240,72 +263,69 @@ fun OrderDetailScreen(navController: NavController, orderId: Long) {
             KmTopBar(title = "Detail Pesanan", onBackClick = { navController.popBackStack() })
         },
         bottomBar = {
+            // ✅ FIX: background putih agar tidak transparan ke footer
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(NeutralWhite)
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                // Kirim ke Supplier
                 Button(
                     onClick = { navController.navigate(Screen.SendToSupplier.createRoute(orderId)) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = TealPrimary // Warna latar tombol (hijau tosca)
-                    ),
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = TealPrimary),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    // PERBAIKAN: Tembak warna putih langsung di Icon dan Text
-                    Icon(
-                        Icons.Default.ChatBubble,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = NeutralWhite // Memaksa Ikon jadi putih
-                    )
+                    Icon(Icons.Default.ChatBubble, null, modifier = Modifier.size(20.dp), tint = NeutralWhite)
                     Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = "Kirim Ke Supplier",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = NeutralWhite // Memaksa Teks jadi putih
-                    )
+                    Text("Kirim ke Supplier", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = NeutralWhite)
                 }
 
+                // Pasang Pengingat Kalender
                 KmSecondaryButton(
                     text = "Pasang Pengingat Kalender",
                     onClick = { navController.navigate(Screen.CalendarReminder.createRoute(orderId, order.menuName)) },
                     icon = Icons.Default.DateRange
                 )
+
+                // ✅ FIX: Tombol "Kembali ke Beranda" (bukan hanya "Kembali")
+                Button(
+                    onClick = {
+                        navController.navigate(Screen.Dashboard.route) {
+                            popUpTo(Screen.Dashboard.route) { inclusive = true }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = NeutralLightGray),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(Icons.Default.Home, null, modifier = Modifier.size(18.dp), tint = NeutralBlack)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Kembali ke Beranda", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = NeutralBlack)
+                }
             }
         }
     ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
+            modifier = Modifier.fillMaxSize().padding(innerPadding),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {
                 KmCard {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("Status Pesanan", fontSize = 14.sp, color = NeutralMidGray)
                         KmOrderStatusChip(order.status)
                     }
                     Spacer(Modifier.height(16.dp))
-                    DetailRow(label = "Pelanggan", value = order.customerName)
-                    DetailRow(label = "Tanggal", value = order.dateFormatted)
-                    DetailRow(label = "Jumlah Porsi", value = "${order.portions} Porsi")
-                    DetailRow(label = "Menu", value = order.menuName)
+                    DetailRow("Pelanggan",     order.customerName)
+                    DetailRow("Tanggal",       order.dateFormatted)
+                    DetailRow("Jumlah Porsi",  "${order.portions} Porsi")
+                    DetailRow("Menu",          order.menuName)
                     HorizontalDivider(color = NeutralDivider, modifier = Modifier.padding(vertical = 8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("Total HPP", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = NeutralBlack)
                         Text("Rp ${formatRupiah(order.hpp)}", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = TealPrimary)
                     }
@@ -318,9 +338,7 @@ fun OrderDetailScreen(navController: NavController, orderId: Long) {
 @Composable
 private fun DetailRow(label: String, value: String) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(label, fontSize = 15.sp, color = NeutralMidGray)

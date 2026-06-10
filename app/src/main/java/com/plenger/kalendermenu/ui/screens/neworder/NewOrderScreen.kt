@@ -22,6 +22,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.Card
@@ -31,6 +33,7 @@ import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -49,6 +52,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -74,13 +78,16 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewOrderScreen(navController: NavController) {
-    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
-    var portions by remember { mutableStateOf("50") }
-    var showDatePicker by remember { mutableStateOf(false) }
+
+    var selectedDate    by remember { mutableStateOf(LocalDate.now()) }
+    var portions        by remember { mutableStateOf(50) }   // ✅ Int, bukan String
+    var portionsText    by remember { mutableStateOf("50") } // teks input sementara
+    var showDatePicker  by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState()
-    val scrollState = rememberScrollState()
+    val scrollState     = rememberScrollState()
 
     val formatter = DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale("id", "ID"))
+    val orderId   = 1L
 
     Scaffold(
         containerColor = NeutralBackground,
@@ -98,13 +105,14 @@ fun NewOrderScreen(navController: NavController) {
         ) {
             KmStepIndicator(
                 currentStep = 1,
-                totalSteps = 3,
-                labels = listOf("Detail", "Menu", "Konfirmasi")
+                totalSteps  = 3,
+                labels      = listOf("Detail", "Menu", "Konfirmasi")
             )
 
+            // ── Tanggal Pesanan ───────────────────────────────────
             KmCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.DateRange, contentDescription = null, tint = TealPrimary, modifier = Modifier.size(22.dp))
+                    Icon(Icons.Default.DateRange, null, tint = TealPrimary, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Tanggal Pesanan", fontSize = 14.sp, color = NeutralMidGray, fontWeight = FontWeight.Medium)
                 }
@@ -117,53 +125,103 @@ fun NewOrderScreen(navController: NavController) {
                 )
                 Spacer(Modifier.height(12.dp))
                 KmSecondaryButton(
-                    text = "Ubah Tanggal",
+                    text  = "Ubah Tanggal",
                     onClick = { showDatePicker = true },
-                    icon = Icons.Default.DateRange
+                    icon  = Icons.Default.DateRange
                 )
             }
 
+            // ── Jumlah Porsi ──────────────────────────────────────
             KmCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Group, contentDescription = null, tint = TealPrimary, modifier = Modifier.size(22.dp))
+                    Icon(Icons.Default.Group, null, tint = TealPrimary, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Jumlah Porsi", fontSize = 14.sp, color = NeutralMidGray, fontWeight = FontWeight.Medium)
                 }
-                Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = portions,
-                    onValueChange = { if (it.all { c -> c.isDigit() } && it.length <= 4) portions = it },
+                Spacer(Modifier.height(14.dp))
+
+                // ✅ FIX: Row dengan tombol - dan + serta text input di tengah
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    textStyle = MaterialTheme.typography.displayMedium.copy(
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        color = NeutralBlack
-                    ),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = TealPrimary,
-                        unfocusedBorderColor = NeutralDivider
-                    ),
-                    placeholder = {
-                        Text(
-                            "50",
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            fontSize = 28.sp
-                        )
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    // Tombol kurangi
+                    IconButton(
+                        onClick = {
+                            if (portions > 1) {
+                                portions--
+                                portionsText = portions.toString()
+                            }
+                        },
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(TealContainer)
+                    ) {
+                        Icon(Icons.Default.Remove, null, tint = TealPrimary, modifier = Modifier.size(22.dp))
                     }
-                )
-                Spacer(Modifier.height(6.dp))
+
+                    Spacer(Modifier.width(16.dp))
+
+                    // ✅ FIX: OutlinedTextField yang benar-benar bisa diedit
+                    OutlinedTextField(
+                        value = portionsText,
+                        onValueChange = { input ->
+                            // Filter hanya angka, max 4 digit
+                            val filtered = input.filter { it.isDigit() }.take(4)
+                            portionsText = filtered
+                            // Update Int portions
+                            val num = filtered.toIntOrNull()
+                            if (num != null && num > 0) portions = num
+                        },
+                        modifier = Modifier.width(120.dp),
+                        textStyle = MaterialTheme.typography.displaySmall.copy(
+                            textAlign = TextAlign.Center,
+                            color = NeutralBlack,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = TealPrimary,
+                            unfocusedBorderColor = NeutralDivider,
+                            focusedContainerColor = NeutralWhite,
+                            unfocusedContainerColor = NeutralWhite
+                        )
+                    )
+
+                    Spacer(Modifier.width(16.dp))
+
+                    // Tombol tambah
+                    IconButton(
+                        onClick = {
+                            if (portions < 9999) {
+                                portions++
+                                portionsText = portions.toString()
+                            }
+                        },
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(TealContainer)
+                    ) {
+                        Icon(Icons.Default.Add, null, tint = TealPrimary, modifier = Modifier.size(22.dp))
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
                 Text(
-                    "Ketuk untuk ubah jumlah",
+                    "Ketuk angka untuk ubah, atau gunakan tombol ±",
                     fontSize = 13.sp,
                     color = NeutralMidGray,
                     modifier = Modifier.fillMaxWidth(),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    textAlign = TextAlign.Center
                 )
             }
 
+            // ── Pilih Jenis Pesanan ────────────────────────────────
             Text(
                 "Pilih Jenis Pesanan",
                 style = MaterialTheme.typography.titleMedium,
@@ -171,33 +229,31 @@ fun NewOrderScreen(navController: NavController) {
                 color = NeutralBlack
             )
 
-            val portionsInt = portions.toIntOrNull() ?: 0
-            val orderId = 1L
-
+            // ✅ FIX: bawa portionsText ke screen berikutnya via state
             RouteOptionCard(
-                icon = Icons.Default.Restaurant,
-                iconBg = TealContainer,
-                iconTint = TealPrimary,
-                title = "Pelanggan Minta Menu Sendiri",
-                subtitle = "Tentukan menu spesifik & ekstrak bahan otomatis",
+                icon        = Icons.Default.Restaurant,
+                iconBg      = TealContainer,
+                iconTint    = TealPrimary,
+                title       = "Pelanggan Minta Menu Sendiri",
+                subtitle    = "Tentukan menu spesifik & ekstrak bahan otomatis",
                 accentColor = TealPrimary,
-                badge = null,
-                onClick = {
-                    if (portionsInt > 0)
+                badge       = null,
+                onClick     = {
+                    if (portions > 0)
                         navController.navigate(Screen.SpecificMenu.createRoute(orderId))
                 }
             )
 
             RouteOptionCard(
-                icon = Icons.Default.SmartToy,
-                iconBg = OrangeAILight,
-                iconTint = OrangeAI,
-                title = "Sesuaikan dengan Budget",
-                subtitle = "AI rekomendasikan menu terbaik sesuai anggaran",
+                icon        = Icons.Default.SmartToy,
+                iconBg      = OrangeAILight,
+                iconTint    = OrangeAI,
+                title       = "Sesuaikan dengan Budget",
+                subtitle    = "AI rekomendasikan menu terbaik sesuai anggaran",
                 accentColor = OrangeAI,
-                badge = { KmAiBadge() },
-                onClick = {
-                    if (portionsInt > 0)
+                badge       = { KmAiBadge() },
+                onClick     = {
+                    if (portions > 0)
                         navController.navigate(Screen.AiRecommendation.createRoute(orderId))
                 }
             )
@@ -206,6 +262,7 @@ fun NewOrderScreen(navController: NavController) {
         }
     }
 
+    // ── Date Picker Dialog ─────────────────────────────────────────
     if (showDatePicker) {
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
@@ -229,7 +286,7 @@ fun NewOrderScreen(navController: NavController) {
                 state = datePickerState,
                 colors = DatePickerDefaults.colors(
                     selectedDayContainerColor = TealPrimary,
-                    todayDateBorderColor = TealPrimary
+                    todayDateBorderColor      = TealPrimary
                 )
             )
         }
@@ -248,32 +305,23 @@ private fun RouteOptionCard(
     onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = NeutralWhite),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(1.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(
-                    width = 2.dp,
-                    color = accentColor,
-                    shape = RoundedCornerShape(16.dp)
-                )
+                .border(2.dp, accentColor, RoundedCornerShape(16.dp))
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(iconBg),
+                modifier = Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)).background(iconBg),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(26.dp))
+                Icon(icon, null, tint = iconTint, modifier = Modifier.size(26.dp))
             }
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -282,11 +330,8 @@ private fun RouteOptionCard(
                 Text(subtitle, fontSize = 13.sp, color = NeutralMidGray, lineHeight = 18.sp)
             }
             Spacer(Modifier.width(8.dp))
-            if (badge != null) {
-                badge()
-            } else {
-                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = accentColor)
-            }
+            if (badge != null) badge()
+            else Icon(Icons.Default.ChevronRight, null, tint = accentColor)
         }
     }
 }

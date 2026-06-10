@@ -11,19 +11,32 @@ import com.plenger.kalendermenu.ui.screens.calendar.CalendarReminderScreen
 import com.plenger.kalendermenu.ui.screens.dashboard.DashboardScreen
 import com.plenger.kalendermenu.ui.screens.ingredientprice.IngredientPriceListScreen
 import com.plenger.kalendermenu.ui.screens.ingredientprice.UpdateIngredientPriceScreen
+import com.plenger.kalendermenu.ui.screens.login.LoginScreen
 import com.plenger.kalendermenu.ui.screens.neworder.NewOrderScreen
 import com.plenger.kalendermenu.ui.screens.orders.AllOrdersScreen
 import com.plenger.kalendermenu.ui.screens.orders.OrderDetailScreen
 import com.plenger.kalendermenu.ui.screens.profile.ProfileScreen
 import com.plenger.kalendermenu.ui.screens.specificmenu.SpecificMenuScreen
+import com.plenger.kalendermenu.ui.screens.splash.SplashScreen
 import com.plenger.kalendermenu.ui.screens.supplier.SendToSupplierScreen
 
 @Composable
 fun KalenderMenuNavGraph(navController: NavHostController) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Dashboard.route
+        startDestination = Screen.Splash.route   // ← mulai dari Splash
     ) {
+
+        // ── Entry ─────────────────────────────────────────────────
+        composable(Screen.Splash.route) {
+            SplashScreen(navController = navController)
+        }
+
+        composable(Screen.Login.route) {
+            LoginScreen(navController = navController)
+        }
+
+        // ── Main ──────────────────────────────────────────────────
         composable(Screen.Dashboard.route) {
             DashboardScreen(navController = navController)
         }
@@ -55,17 +68,13 @@ fun KalenderMenuNavGraph(navController: NavHostController) {
         composable(
             route = Screen.CalendarReminder.route,
             arguments = listOf(
-                navArgument("orderId") { type = NavType.LongType },
+                navArgument("orderId")  { type = NavType.LongType },
                 navArgument("menuName") { type = NavType.StringType }
             )
         ) { backStack ->
-            val orderId = backStack.arguments?.getLong("orderId") ?: 0L
+            val orderId  = backStack.arguments?.getLong("orderId") ?: 0L
             val menuName = backStack.arguments?.getString("menuName") ?: ""
-            CalendarReminderScreen(
-                navController = navController,
-                orderId = orderId,
-                menuName = menuName
-            )
+            CalendarReminderScreen(navController = navController, orderId = orderId, menuName = menuName)
         }
 
         composable(
