@@ -1,0 +1,195 @@
+{
+  "_metadata": {
+    "nama_file": "Base Price Reference (BPR) - Master Harga Komoditas",
+    "sumber": "Pusat Informasi Harga Pangan Strategis (PIHPS) Nasional - Bank Indonesia",
+    "url_sumber": "https://www.bi.go.id/hargapangan/",
+    "tanggal_referensi": "2026-06-09",
+    "wilayah": "Nasional (acuan Jawa Timur)",
+    "keterangan": "Harga eceran tingkat konsumen. Diperbarui secara berkala sesuai data PIHPS terbaru."
+  },
+  "komoditas": {
+    "daging": {
+      "daging_kambing": {
+        "nama_tampil": "Daging Kambing",
+        "kategori": "Daging",
+        "harga_per_kg": 140000,
+        "satuan": "kg",
+        "keterangan": "Estimasi harga pasar Jawa Timur. Referensi: harga daging kambing Jawarandu ~Rp110.000-150.000/kg (gibasbarokah.com). Gunakan nilai tengah konservatif."
+      },
+      "daging_sapi_kualitas_1": {
+        "nama_tampil": "Daging Sapi Kualitas I",
+        "kategori": "Daging",
+        "harga_per_kg": 148150,
+        "satuan": "kg",
+        "keterangan": "Sumber: PIHPS Bank Indonesia, 9 Juni 2026"
+      },
+      "daging_sapi_kualitas_2": {
+        "nama_tampil": "Daging Sapi Kualitas II",
+        "kategori": "Daging",
+        "harga_per_kg": 139400,
+        "satuan": "kg",
+        "keterangan": "Sumber: PIHPS Bank Indonesia, 9 Juni 2026"
+      },
+      "daging_sapi": {
+        "nama_tampil": "Daging Sapi",
+        "kategori": "Daging",
+        "harga_per_kg": 143000,
+        "satuan": "kg",
+        "keterangan": "Rata-rata kualitas I dan II. Gunakan alias ini jika resep tidak menyebut kualitas spesifik."
+      }
+    },
+    "unggas": {
+      "daging_ayam": {
+        "nama_tampil": "Daging Ayam Ras Segar",
+        "kategori": "Unggas",
+        "harga_per_kg": 37700,
+        "satuan": "kg",
+        "keterangan": "Sumber: PIHPS Bank Indonesia, 9 Juni 2026"
+      },
+      "telur_ayam": {
+        "nama_tampil": "Telur Ayam Ras",
+        "kategori": "Unggas",
+        "harga_per_kg": 30350,
+        "satuan": "kg",
+        "keterangan": "Sumber: PIHPS Bank Indonesia, 9 Juni 2026. ±16g per butir telur."
+      }
+    },
+    "bumbu": {
+      "bawang_merah": {
+        "nama_tampil": "Bawang Merah",
+        "kategori": "Bumbu",
+        "harga_per_kg": 56250,
+        "satuan": "kg",
+        "keterangan": "Sumber: PIHPS Bank Indonesia, 9 Juni 2026"
+      },
+      "bawang_putih": {
+        "nama_tampil": "Bawang Putih",
+        "kategori": "Bumbu",
+        "harga_per_kg": 40800,
+        "satuan": "kg",
+        "keterangan": "Sumber: PIHPS Bank Indonesia, 9 Juni 2026"
+      },
+      "cabai_rawit_merah": {
+        "nama_tampil": "Cabai Rawit Merah",
+        "kategori": "Bumbu",
+        "harga_per_kg": 75150,
+        "satuan": "kg",
+        "keterangan": "Sumber: PIHPS Bank Indonesia, 9 Juni 2026"
+      },
+      "cabai_rawit_hijau": {
+        "nama_tampil": "Cabai Rawit Hijau",
+        "kategori": "Bumbu",
+        "harga_per_kg": 53750,
+        "satuan": "kg",
+        "keterangan": "Sumber: PIHPS Bank Indonesia, 9 Juni 2026"
+      },
+      "cabai_merah_besar": {
+        "nama_tampil": "Cabai Merah Besar",
+        "kategori": "Bumbu",
+        "harga_per_kg": 62200,
+        "satuan": "kg",
+        "keterangan": "Sumber: PIHPS Bank Indonesia, 9 Juni 2026"
+      },
+      "cabai_merah_keriting": {
+        "nama_tampil": "Cabai Merah Keriting",
+        "kategori": "Bumbu",
+        "harga_per_kg": 58400,
+        "satuan": "kg",
+        "keterangan": "Sumber: PIHPS Bank Indonesia, 9 Juni 2026"
+      }
+    },
+    "sembako": {
+      "beras_medium": {
+        "nama_tampil": "Beras Kualitas Medium",
+        "kategori": "Sembako",
+        "harga_per_kg": 16000,
+        "satuan": "kg",
+        "keterangan": "Rata-rata Medium I (Rp16.200) dan Medium II (Rp16.050). Sumber: PIHPS, 9 Juni 2026"
+      },
+      "beras_super": {
+        "nama_tampil": "Beras Kualitas Super",
+        "kategori": "Sembako",
+        "harga_per_kg": 17200,
+        "satuan": "kg",
+        "keterangan": "Rata-rata Super I (Rp17.450) dan Super II (Rp16.950). Sumber: PIHPS, 9 Juni 2026"
+      },
+      "beras": {
+        "nama_tampil": "Beras",
+        "kategori": "Sembako",
+        "harga_per_kg": 16000,
+        "satuan": "kg",
+        "keterangan": "Alias default ke beras medium. Gunakan jika resep tidak menyebut kualitas."
+      },
+      "minyak_goreng_curah": {
+        "nama_tampil": "Minyak Goreng Curah",
+        "kategori": "Sembako",
+        "harga_per_liter": 20700,
+        "satuan": "liter",
+        "keterangan": "Sumber: PIHPS Bank Indonesia, 9 Juni 2026"
+      },
+      "minyak_goreng_kemasan": {
+        "nama_tampil": "Minyak Goreng Kemasan Bermerek I",
+        "kategori": "Sembako",
+        "harga_per_liter": 24050,
+        "satuan": "liter",
+        "keterangan": "Sumber: PIHPS Bank Indonesia, 9 Juni 2026"
+      },
+      "minyak_goreng": {
+        "nama_tampil": "Minyak Goreng",
+        "kategori": "Sembako",
+        "harga_per_liter": 20700,
+        "satuan": "liter",
+        "keterangan": "Alias default ke minyak goreng curah."
+      },
+      "gula_pasir": {
+        "nama_tampil": "Gula Pasir Lokal",
+        "kategori": "Sembako",
+        "harga_per_kg": 19100,
+        "satuan": "kg",
+        "keterangan": "Sumber: PIHPS Bank Indonesia, 9 Juni 2026"
+      },
+      "gula_premium": {
+        "nama_tampil": "Gula Pasir Kualitas Premium",
+        "kategori": "Sembako",
+        "harga_per_kg": 20250,
+        "satuan": "kg",
+        "keterangan": "Sumber: PIHPS Bank Indonesia, 9 Juni 2026"
+      }
+    }
+  },
+  "konversi_satuan": {
+    "keterangan": "Faktor konversi untuk membantu PriceLookup menghitung harga dari berbagai satuan input",
+    "gr_ke_kg": 0.001,
+    "ml_ke_liter": 0.001,
+    "ons_ke_kg": 0.1,
+    "sdm_minyak_ke_liter": 0.015,
+    "butir_telur_ke_kg": 0.06,
+    "siung_bawang_putih_ke_kg": 0.005,
+    "siung_bawang_merah_ke_kg": 0.008
+  },
+  "alias_nama_bahan": {
+    "keterangan": "Mapping nama bahan bebas dari resep ke key komoditas. Tambahkan alias baru sesuai kebutuhan.",
+    "ayam": "daging_ayam",
+    "ayam kampung": "daging_ayam",
+    "daging ayam": "daging_ayam",
+    "kambing": "daging_kambing",
+    "daging kambing": "daging_kambing",
+    "sapi": "daging_sapi",
+    "daging sapi": "daging_sapi",
+    "bawang merah": "bawang_merah",
+    "bawang putih": "bawang_putih",
+    "cabai rawit": "cabai_rawit_merah",
+    "cabe rawit": "cabai_rawit_merah",
+    "cabai merah": "cabai_merah_besar",
+    "cabe merah": "cabai_merah_besar",
+    "cabai keriting": "cabai_merah_keriting",
+    "beras": "beras",
+    "nasi": "beras",
+    "minyak goreng": "minyak_goreng",
+    "minyak": "minyak_goreng",
+    "telur": "telur_ayam",
+    "telur ayam": "telur_ayam",
+    "gula": "gula_pasir",
+    "gula pasir": "gula_pasir"
+  }
+}

@@ -22,91 +22,77 @@ import com.plenger.kalendermenu.ui.screens.supplier.SendToSupplierScreen
 
 @Composable
 fun KalenderMenuNavGraph(navController: NavHostController) {
-    NavHost(
-        navController = navController,
-        startDestination = Screen.Splash.route   // ← mulai dari Splash
-    ) {
-
-        // ── Entry ─────────────────────────────────────────────────
-        composable(Screen.Splash.route) {
-            SplashScreen(navController = navController)
-        }
-
-        composable(Screen.Login.route) {
-            LoginScreen(navController = navController)
-        }
-
-        // ── Main ──────────────────────────────────────────────────
-        composable(Screen.Dashboard.route) {
-            DashboardScreen(navController = navController)
-        }
-
-        composable(Screen.AllOrders.route) {
-            AllOrdersScreen(navController = navController)
-        }
-
-        composable(Screen.NewOrder.route) {
-            NewOrderScreen(navController = navController)
-        }
+    NavHost(navController = navController, startDestination = Screen.Splash.route) {
+        composable(Screen.Splash.route) { SplashScreen(navController) }
+        composable(Screen.Login.route) { LoginScreen(navController) }
+        composable(Screen.Dashboard.route) { DashboardScreen(navController) }
+        composable(Screen.AllOrders.route) { AllOrdersScreen(navController) }
+        composable(Screen.NewOrder.route) { NewOrderScreen(navController) }
 
         composable(
-            route = Screen.SpecificMenu.route,
-            arguments = listOf(navArgument("orderId") { type = NavType.LongType })
-        ) { backStack ->
-            val orderId = backStack.arguments?.getLong("orderId") ?: 0L
-            SpecificMenuScreen(navController = navController, orderId = orderId)
-        }
-
-        composable(
-            route = Screen.AiRecommendation.route,
-            arguments = listOf(navArgument("orderId") { type = NavType.LongType })
-        ) { backStack ->
-            val orderId = backStack.arguments?.getLong("orderId") ?: 0L
-            AiRecommendationScreen(navController = navController, orderId = orderId)
-        }
-
-        composable(
-            route = Screen.CalendarReminder.route,
+            route = Screen.SpecificMenu.route + "/{orderId}/{portions}/{date}/{customerName}",
             arguments = listOf(
-                navArgument("orderId")  { type = NavType.LongType },
+                navArgument("orderId") { type = NavType.LongType },
+                navArgument("portions") { type = NavType.IntType },
+                navArgument("date") { type = NavType.StringType },
+                navArgument("customerName") { type = NavType.StringType }
+            )
+        ) { backStack ->
+            SpecificMenuScreen(navController, backStack.arguments?.getLong("orderId") ?: 0L)
+        }
+
+        composable(
+            route = Screen.AiRecommendation.route + "/{orderId}/{portions}/{date}/{customerName}",
+            arguments = listOf(
+                navArgument("orderId") { type = NavType.LongType },
+                navArgument("portions") { type = NavType.IntType },
+                navArgument("date") { type = NavType.StringType },
+                navArgument("customerName") { type = NavType.StringType }
+            )
+        ) { backStack ->
+            AiRecommendationScreen(
+                navController = navController,
+                orderId = backStack.arguments?.getLong("orderId") ?: 0L
+            )
+        }
+
+        composable(
+            route = Screen.CalendarReminder.route + "/{orderId}/{menuName}",
+            arguments = listOf(
+                navArgument("orderId") { type = NavType.LongType },
                 navArgument("menuName") { type = NavType.StringType }
             )
         ) { backStack ->
-            val orderId  = backStack.arguments?.getLong("orderId") ?: 0L
-            val menuName = backStack.arguments?.getString("menuName") ?: ""
-            CalendarReminderScreen(navController = navController, orderId = orderId, menuName = menuName)
+            CalendarReminderScreen(
+                navController = navController,
+                orderId = backStack.arguments?.getLong("orderId") ?: 0L,
+                menuName = backStack.arguments?.getString("menuName") ?: ""
+            )
         }
 
         composable(
-            route = Screen.SendToSupplier.route,
+            route = Screen.SendToSupplier.route + "/{orderId}",
             arguments = listOf(navArgument("orderId") { type = NavType.LongType })
         ) { backStack ->
-            val orderId = backStack.arguments?.getLong("orderId") ?: 0L
-            SendToSupplierScreen(navController = navController, orderId = orderId)
+            SendToSupplierScreen(navController, backStack.arguments?.getLong("orderId") ?: 0L)
         }
 
         composable(
-            route = Screen.UpdateIngredientPrice.route,
+            route = Screen.UpdateIngredientPrice.route + "/{recipeId}",
             arguments = listOf(navArgument("recipeId") { type = NavType.LongType })
         ) { backStack ->
-            val recipeId = backStack.arguments?.getLong("recipeId") ?: 0L
-            UpdateIngredientPriceScreen(navController = navController, recipeId = recipeId)
+            UpdateIngredientPriceScreen(navController, backStack.arguments?.getLong("recipeId") ?: 0L)
         }
 
-        composable(Screen.IngredientPriceList.route) {
-            IngredientPriceListScreen(navController = navController)
-        }
-
-        composable(Screen.Profile.route) {
-            ProfileScreen(navController = navController)
-        }
+        composable(Screen.IngredientPriceList.route) { IngredientPriceListScreen(navController) }
+        composable(Screen.Profile.route) { ProfileScreen(navController) }
 
         composable(
-            route = Screen.OrderDetail.route,
+            route = Screen.OrderDetail.route + "/{orderId}",
             arguments = listOf(navArgument("orderId") { type = NavType.LongType })
         ) { backStack ->
-            val orderId = backStack.arguments?.getLong("orderId") ?: 0L
-            OrderDetailScreen(navController = navController, orderId = orderId)
+            OrderDetailScreen(navController, backStack.arguments?.getLong("orderId") ?: 0L)
         }
+
     }
 }

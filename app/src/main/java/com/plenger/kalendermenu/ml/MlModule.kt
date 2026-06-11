@@ -8,12 +8,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
-/**
- * MlModule — Hilt DI
- * Provides TfliteHelper dan RecipeSearch sebagai Singleton.
- * Kedua class ini di-share ke SpecificMenuViewModel
- * dan AiRecommendationViewModel.
- */
 @Module
 @InstallIn(SingletonComponent::class)
 object MlModule {
@@ -29,4 +23,10 @@ object MlModule {
     fun provideRecipeSearch(
         @ApplicationContext context: Context
     ): RecipeSearch = RecipeSearch(context)
+
+    @Provides
+    @Singleton
+    fun providePriceMapper(
+        @ApplicationContext context: Context
+    ): PriceMapper = PriceMapper(context)
 }

@@ -1,5 +1,7 @@
 package com.plenger.kalendermenu.ui.screens.calendar
 
+import android.content.Intent
+import android.provider.CalendarContract
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -30,14 +32,17 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.plenger.kalendermenu.data.OrderRepository
 import com.plenger.kalendermenu.ui.components.KmTopBar
 import com.plenger.kalendermenu.ui.navigation.Screen
 import com.plenger.kalendermenu.ui.theme.NeutralBackground
@@ -53,6 +58,12 @@ fun CalendarReminderScreen(
     orderId: Long,
     menuName: String
 ) {
+    val context = LocalContext.current
+    val repository = remember { OrderRepository.getInstance(context) }
+    val order = remember { OrderRepository.getInstance(context).getOrderById(orderId) }
+    val displayDate = order?.dateFormatted ?: "Hari Ini"
+    val customerName = order?.customerName ?: "Pelanggan"
+
     Scaffold(
         containerColor = NeutralBackground,
         topBar = {
@@ -66,7 +77,6 @@ fun CalendarReminderScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // PERBAIKAN 1: Tombol Kembali ke Beranda diganti agar teks dan ikon pasti putih
                 Button(
                     onClick = {
                         navController.navigate(Screen.Dashboard.route) {
@@ -84,19 +94,18 @@ fun CalendarReminderScreen(
                     Icon(
                         imageVector = Icons.Default.Home,
                         contentDescription = null,
-                        tint = NeutralWhite, // Ikon dipaksa putih
+                        tint = NeutralWhite,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Kembali ke Beranda",
-                        color = NeutralWhite, // Teks dipaksa putih
+                        color = NeutralWhite,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
 
-                // PERBAIKAN 2: Tombol Kirim ke Supplier sekalian dirapikan posisi ikonnya
                 OutlinedButton(
                     onClick = { navController.navigate(Screen.SendToSupplier.createRoute(orderId)) },
                     modifier = Modifier
@@ -105,7 +114,7 @@ fun CalendarReminderScreen(
                     shape = RoundedCornerShape(16.dp),
                     border = BorderStroke(1.dp, TealPrimary),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = TealPrimary // Warna teks dan ikon jadi Teal
+                        contentColor = TealPrimary
                     )
                 ) {
                     Icon(
@@ -156,7 +165,7 @@ fun CalendarReminderScreen(
             Spacer(Modifier.height(20.dp))
 
             Text(
-                "Pengingat Berhasil!",
+                "Konfigurasi Siap!",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = NeutralBlack,
@@ -164,12 +173,35 @@ fun CalendarReminderScreen(
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                "Jadwal memasak sudah tersimpan di\nGoogle Calendar HP Anda.",
+                "Ketuk tombol di bawah untuk\nmenyimpannya ke aplikasi Google Calendar.",
                 fontSize = 16.sp,
                 color = NeutralMidGray,
                 textAlign = TextAlign.Center,
                 lineHeight = 24.sp
             )
+
+            Spacer(Modifier.height(28.dp))
+
+            Button(
+                onClick = {
+                    val intent = Intent(Intent.ACTION_INSERT).apply {
+                        data = CalendarContract.Events.CONTENT_URI
+                        putExtra(CalendarContract.Events.TITLE, "Masak: $menuName")
+                        putExtra(CalendarContract.Events.DESCRIPTION, "Persiapan pesanan katering untuk $customerName")
+                        putExtra(CalendarContract.Events.ALL_DAY, true)
+                    }
+                    context.startActivity(intent)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = TealPrimary)
+            ) {
+                Icon(Icons.Outlined.DateRange, null, tint = NeutralWhite)
+                Spacer(Modifier.width(8.dp))
+                Text("Simpan ke Kalender HP", color = NeutralWhite, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
 
             Spacer(Modifier.height(28.dp))
 
@@ -195,29 +227,18 @@ fun CalendarReminderScreen(
                     Spacer(Modifier.width(12.dp))
                     Column {
                         Text(
-                            "Selasa, 24 Juni 2026",
+                            text = displayDate,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 17.sp,
                             color = NeutralBlack
                         )
                         Spacer(Modifier.height(3.dp))
                         Text(
-                            "07:00 WIB · Siapkan Masakan $menuName",
+                            text = "Siapkan Masakan $menuName",
                             fontSize = 14.sp,
                             color = NeutralMidGray,
                             lineHeight = 20.sp
                         )
-                        Spacer(Modifier.height(10.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.DateRange, contentDescription = null, tint = TealPrimary, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(5.dp))
-                            Text(
-                                "Tersimpan di Google Calendar",
-                                color = TealPrimary,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
                     }
                 }
             }

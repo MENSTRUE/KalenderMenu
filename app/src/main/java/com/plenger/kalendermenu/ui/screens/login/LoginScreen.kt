@@ -1,5 +1,6 @@
 package com.plenger.kalendermenu.ui.screens.login
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,6 +35,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -64,18 +67,28 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(navController: NavController) {
+    val context = LocalContext.current
+    val sharedPrefs = remember { context.getSharedPreferences("kalendermenu_prefs", Context.MODE_PRIVATE) }
 
-    var username    by remember { mutableStateOf("") }
-    var password    by remember { mutableStateOf("") }
-    var showPass    by remember { mutableStateOf(false) }
-    var isLoading   by remember { mutableStateOf(false) }
-    var errorMsg    by remember { mutableStateOf<String?>(null) }
-    val scope       = rememberCoroutineScope()
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var showPass by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMsg by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
 
-    // Demo credentials
     val DEMO_USER = "admin"
     val DEMO_PASS = "kalender123"
+
+    LaunchedEffect(Unit) {
+        val isLoggedIn = sharedPrefs.getBoolean("is_logged_in", false)
+        if (isLoggedIn) {
+            navController.navigate(Screen.Dashboard.route) {
+                popUpTo(Screen.Login.route) { inclusive = true }
+            }
+        }
+    }
 
     fun doLogin() {
         errorMsg = null
@@ -85,8 +98,9 @@ fun LoginScreen(navController: NavController) {
         }
         scope.launch {
             isLoading = true
-            delay(800L) // simulate network
+            delay(800L)
             if (username.trim() == DEMO_USER && password == DEMO_PASS) {
+                sharedPrefs.edit().putBoolean("is_logged_in", true).apply()
                 navController.navigate(Screen.Dashboard.route) {
                     popUpTo(Screen.Login.route) { inclusive = true }
                 }
@@ -102,7 +116,6 @@ fun LoginScreen(navController: NavController) {
             .fillMaxSize()
             .background(TealPrimary)
     ) {
-        // Top teal header
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -137,7 +150,6 @@ fun LoginScreen(navController: NavController) {
             )
         }
 
-        // Bottom white card
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -167,7 +179,6 @@ fun LoginScreen(navController: NavController) {
 
                 Spacer(Modifier.height(4.dp))
 
-                // Username field
                 OutlinedTextField(
                     value = username,
                     onValueChange = { username = it; errorMsg = null },
@@ -186,7 +197,6 @@ fun LoginScreen(navController: NavController) {
                     )
                 )
 
-                // Password field
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it; errorMsg = null },
@@ -207,7 +217,7 @@ fun LoginScreen(navController: NavController) {
                         }
                     },
                     visualTransformation = if (showPass) VisualTransformation.None
-                                           else PasswordVisualTransformation(),
+                    else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     singleLine = true,
                     shape = RoundedCornerShape(14.dp),
@@ -218,7 +228,6 @@ fun LoginScreen(navController: NavController) {
                     )
                 )
 
-                // Error message
                 if (errorMsg != null) {
                     Text(
                         errorMsg!!,
@@ -228,10 +237,8 @@ fun LoginScreen(navController: NavController) {
                     )
                 }
 
-
                 Spacer(Modifier.height(4.dp))
 
-                // Login button
                 Button(
                     onClick = { doLogin() },
                     modifier = Modifier
@@ -260,7 +267,6 @@ fun LoginScreen(navController: NavController) {
                     }
                 }
 
-                // Lupa password
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
@@ -268,7 +274,7 @@ fun LoginScreen(navController: NavController) {
                 ) {
                     Text("Lupa password?", fontSize = 14.sp, color = NeutralMidGray)
                     Spacer(Modifier.width(4.dp))
-                    TextButton(onClick = { /* TODO: reset password */ }) {
+                    TextButton(onClick = { }) {
                         Text("Hubungi Admin", fontSize = 14.sp, color = TealPrimary, fontWeight = FontWeight.SemiBold)
                     }
                 }

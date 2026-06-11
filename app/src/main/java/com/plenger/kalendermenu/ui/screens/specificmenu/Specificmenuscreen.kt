@@ -38,12 +38,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.plenger.kalendermenu.data.OrderRepository
+import com.plenger.kalendermenu.data.OrderSummary
 import com.plenger.kalendermenu.ui.components.KmCard
 import com.plenger.kalendermenu.ui.components.KmTopBar
 import com.plenger.kalendermenu.ui.navigation.Screen
@@ -58,6 +61,9 @@ import com.plenger.kalendermenu.ui.theme.StatusRed
 import com.plenger.kalendermenu.ui.theme.StatusRedLight
 import com.plenger.kalendermenu.ui.theme.TealContainer
 import com.plenger.kalendermenu.ui.theme.TealPrimary
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun SpecificMenuScreen(
@@ -66,6 +72,35 @@ fun SpecificMenuScreen(
     viewModel: SpecificMenuViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    fun saveAndNavigate(targetRoute: String) {
+        val repo = OrderRepository.getInstance(context)
+        val dateToSave = try {
+            LocalDate.parse(viewModel.date)
+        } catch (_: Exception) {
+            LocalDate.now()
+        }
+        val formatterFull = DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale("id", "ID"))
+        val formatterShort = DateTimeFormatter.ofPattern("EEE", Locale("id", "ID"))
+        val formatterNum = DateTimeFormatter.ofPattern("dd", Locale("id", "ID"))
+
+        repo.saveOrder(
+            OrderSummary(
+                id = orderId,
+                customerName = viewModel.customerName,
+                menuName = uiState.result!!.menuName,
+                portions = uiState.result!!.portions,
+                hpp = uiState.result!!.estimatedHpp,
+                dateFormatted = dateToSave.format(formatterFull),
+                dayShort = dateToSave.format(formatterShort).uppercase(),
+                dateNumber = dateToSave.format(formatterNum),
+                status = "menunggu",
+                ingredients = uiState.result!!.ingredients.map { "${it.name}: ${it.quantity}" }
+            )
+        )
+        navController.navigate(targetRoute)
+    }
 
     Scaffold(
         containerColor = NeutralBackground,
@@ -81,10 +116,9 @@ fun SpecificMenuScreen(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    // Tombol Pasang Pengingat Kalender (Sudah Putih)
                     Button(
                         onClick = {
-                            navController.navigate(
+                            saveAndNavigate(
                                 Screen.CalendarReminder.createRoute(
                                     orderId,
                                     uiState.result!!.menuName
@@ -94,51 +128,28 @@ fun SpecificMenuScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = TealPrimary
-                        ),
+                        colors = ButtonDefaults.buttonColors(containerColor = TealPrimary),
                         shape = RoundedCornerShape(16.dp)
                     ) {
-                        Icon(
-                            Icons.Default.DateRange,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = NeutralWhite
-                        )
+                        Icon(Icons.Default.DateRange, null, modifier = Modifier.size(20.dp), tint = NeutralWhite)
                         Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = "Pasang Pengingat Kalender",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = NeutralWhite
-                        )
+                        Text("Pasang Pengingat Kalender", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = NeutralWhite)
                     }
 
-                    // Tombol Kirim ke Supplier (Sudah Dirapikan)
                     OutlinedButton(
-                        onClick = { navController.navigate(Screen.SendToSupplier.createRoute(orderId)) },
+                        onClick = {
+                            saveAndNavigate(Screen.SendToSupplier.createRoute(orderId))
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = TealPrimary
-                        ),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TealPrimary),
                         border = androidx.compose.foundation.BorderStroke(1.dp, TealPrimary),
                         shape = RoundedCornerShape(16.dp)
                     ) {
-                        Icon(
-                            Icons.Default.ChatBubble,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = TealPrimary
-                        )
+                        Icon(Icons.Default.ChatBubble, null, modifier = Modifier.size(20.dp), tint = TealPrimary)
                         Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = "Kirim ke Supplier",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TealPrimary
-                        )
+                        Text("Kirim ke Supplier", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TealPrimary)
                     }
                 }
             }
@@ -168,16 +179,8 @@ fun SpecificMenuScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            "Daftar Bahan Baku",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = NeutralBlack
-                        )
-                        Surface(
-                            shape = RoundedCornerShape(20.dp),
-                            color = TealContainer
-                        ) {
+                        Text("Daftar Bahan Baku", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = NeutralBlack)
+                        Surface(shape = RoundedCornerShape(20.dp), color = TealContainer) {
                             Text(
                                 "${result.portions} Porsi",
                                 color = TealPrimary,
@@ -196,18 +199,9 @@ fun SpecificMenuScreen(
                         elevation = CardDefaults.cardElevation(1.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                result.menuName,
-                                color = TealPrimary,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp
-                            )
+                            Text(result.menuName, color = TealPrimary, fontWeight = FontWeight.Bold, fontSize = 20.sp)
                             Spacer(Modifier.height(2.dp))
-                            Text(
-                                "Dari dataset 14.000 resep Indonesia",
-                                color = NeutralMidGray,
-                                fontSize = 13.sp
-                            )
+                            Text("Dari dataset 14.000 resep Indonesia", color = NeutralMidGray, fontSize = 13.sp)
                             Spacer(Modifier.height(16.dp))
                             HorizontalDivider(color = NeutralDivider)
                         }
@@ -244,7 +238,7 @@ private fun SearchCard(
 ) {
     KmCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Search, contentDescription = null, tint = TealPrimary, modifier = Modifier.size(22.dp))
+            Icon(Icons.Default.Search, null, tint = TealPrimary, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(8.dp))
             Text("Cari Nama Menu", fontSize = 14.sp, color = NeutralMidGray)
         }
@@ -257,45 +251,22 @@ private fun SearchCard(
             textStyle = MaterialTheme.typography.bodyLarge.copy(color = NeutralBlack),
             singleLine = true,
             shape = RoundedCornerShape(12.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = TealPrimary,
-                unfocusedBorderColor = NeutralDivider
-            )
+            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = TealPrimary, unfocusedBorderColor = NeutralDivider)
         )
         Spacer(Modifier.height(12.dp))
-
-        // PERBAIKAN: Tombol Cari Menu dirubah ke standar agar bisa dikunci ke warna putih
         Button(
             onClick = onSearch,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = TealPrimary // Warna hijau tosca
-            ),
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = TealPrimary),
             shape = RoundedCornerShape(16.dp),
-            enabled = !isLoading // Cegah klik berulang saat loading
+            enabled = !isLoading
         ) {
             if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    color = NeutralWhite,
-                    strokeWidth = 2.dp
-                )
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = NeutralWhite, strokeWidth = 2.dp)
             } else {
-                Icon(
-                    Icons.Default.Search,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = NeutralWhite // Memaksa Ikon jadi putih
-                )
+                Icon(Icons.Default.Search, null, modifier = Modifier.size(20.dp), tint = NeutralWhite)
                 Spacer(Modifier.width(8.dp))
-                Text(
-                    text = "Cari Menu",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = NeutralWhite // Memaksa Teks jadi putih
-                )
+                Text("Cari Menu", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = NeutralWhite)
             }
         }
     }
@@ -304,14 +275,12 @@ private fun SearchCard(
 @Composable
 private fun IngredientRow(name: String, quantity: String) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 14.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(name, fontSize = 16.sp, color = NeutralBlack, fontWeight = FontWeight.Normal)
-        Text(quantity, fontSize = 16.sp, color = TealPrimary, fontWeight = FontWeight.SemiBold)
+        Text(quantity, fontSize = 14.sp, color = NeutralMidGray)
     }
 }
 
@@ -325,21 +294,11 @@ private fun HppEstimateCard(hpp: Long) {
         border = androidx.compose.foundation.BorderStroke(2.dp, TealPrimary.copy(alpha = 0.3f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Box(
-                modifier = Modifier
-                    .width(4.dp)
-                    .height(20.dp)
-                    .background(TealPrimary, RoundedCornerShape(2.dp))
-            )
+            Box(modifier = Modifier.width(4.dp).height(20.dp).background(TealPrimary, RoundedCornerShape(2.dp)))
             Spacer(Modifier.height(4.dp))
             Text("Estimasi Modal Awal", fontSize = 13.sp, color = TealPrimary, fontWeight = FontWeight.Medium)
             Spacer(Modifier.height(6.dp))
-            Text(
-                text = "Rp ${formatRupiah(hpp)}",
-                style = MaterialTheme.typography.displayLarge,
-                color = NeutralBlack,
-                fontWeight = FontWeight.Bold
-            )
+            Text(text = "Rp ${formatRupiah(hpp)}", style = MaterialTheme.typography.displayLarge, color = NeutralBlack, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -351,7 +310,7 @@ private fun ErrorCard(message: String) {
         colors = CardDefaults.cardColors(containerColor = StatusRedLight)
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Error, contentDescription = null, tint = StatusRed)
+            Icon(Icons.Default.Error, null, tint = StatusRed)
             Spacer(Modifier.width(10.dp))
             Text(message, color = StatusRed, fontSize = 15.sp)
         }

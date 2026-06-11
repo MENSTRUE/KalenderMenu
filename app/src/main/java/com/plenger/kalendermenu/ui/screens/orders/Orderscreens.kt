@@ -20,12 +20,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChatBubble
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Restaurant
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -39,26 +42,31 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.plenger.kalendermenu.data.OrderRepository
+import com.plenger.kalendermenu.data.OrderSummary
 import com.plenger.kalendermenu.ui.components.KmBottomNavBar
 import com.plenger.kalendermenu.ui.components.KmCard
 import com.plenger.kalendermenu.ui.components.KmOrderStatusChip
 import com.plenger.kalendermenu.ui.components.KmSecondaryButton
 import com.plenger.kalendermenu.ui.components.KmTopBar
 import com.plenger.kalendermenu.ui.navigation.Screen
-import com.plenger.kalendermenu.ui.screens.dashboard.OrderSummary
-import com.plenger.kalendermenu.ui.screens.dashboard.formatRupiah
 import com.plenger.kalendermenu.ui.theme.NeutralBackground
 import com.plenger.kalendermenu.ui.theme.NeutralBlack
 import com.plenger.kalendermenu.ui.theme.NeutralDarkGray
@@ -66,42 +74,40 @@ import com.plenger.kalendermenu.ui.theme.NeutralDivider
 import com.plenger.kalendermenu.ui.theme.NeutralLightGray
 import com.plenger.kalendermenu.ui.theme.NeutralMidGray
 import com.plenger.kalendermenu.ui.theme.NeutralWhite
+import com.plenger.kalendermenu.ui.theme.StatusGreen
 import com.plenger.kalendermenu.ui.theme.TealPrimary
-
-private val mockOrders = listOf(
-    OrderSummary(1L, "Ibu Hartini", "Nasi Gudeg + Ayam Bakar", 50, 875000,  "Sel, 24 Juni 2026", "SEL", "24", "konfirmasi"),
-    OrderSummary(2L, "Pak Ahmad",   "Nasi Kotak Ayam",          80, 1200000, "Rab, 25 Juni 2026", "RAB", "25", "menunggu"),
-    OrderSummary(3L, "Bu Siti",     "Rendang Sapi",             30, 620000,  "Jum, 27 Juni 2026", "JUM", "27", "konfirmasi"),
-)
 
 @Composable
 fun AllOrdersScreen(navController: NavController) {
+    val context = LocalContext.current
+    val repository = remember { OrderRepository.getInstance(context) }
+
+    val ordersList by repository.ordersFlow.collectAsState()
+
     var selectedFilter by remember { mutableStateOf("Semua") }
     val filters = listOf("Semua", "Minggu Ini", "Bulan Ini", "Selesai")
-    var searchQuery     by remember { mutableStateOf("") }
+    var searchQuery by remember { mutableStateOf("") }
 
-    // ✅ FIX: Sort state — Terbaru / Terlama / HPP Tertinggi
-    var sortBy          by remember { mutableStateOf("Terbaru") }
-    var showSortMenu    by remember { mutableStateOf(false) }
+    var sortBy by remember { mutableStateOf("Terbaru") }
+    var showSortMenu by remember { mutableStateOf(false) }
     val sortOptions = listOf("Terbaru", "Terlama", "HPP Tertinggi")
 
-    val filtered = mockOrders
+    val filtered = ordersList
         .filter { order ->
             (searchQuery.isBlank() || order.customerName.contains(searchQuery, ignoreCase = true)) &&
-            when (selectedFilter) {
-                "Semua"      -> true
-                "Selesai"    -> order.status == "selesai"
-                "Minggu Ini" -> true   // semua data mock masuk minggu ini
-                "Bulan Ini"  -> true
-                else         -> true
-            }
+                    when (selectedFilter) {
+                        "Semua"      -> true
+                        "Selesai"    -> order.status.lowercase() == "selesai"
+                        "Minggu Ini" -> true
+                        "Bulan Ini"  -> true
+                        else         -> true
+                    }
         }
         .let { list ->
-            // ✅ FIX: sort berfungsi
             when (sortBy) {
                 "Terlama"      -> list.sortedBy { it.id }
                 "HPP Tertinggi"-> list.sortedByDescending { it.hpp }
-                else           -> list.sortedByDescending { it.id }   // Terbaru
+                else           -> list.sortedByDescending { it.id }
             }
         }
 
@@ -180,7 +186,6 @@ fun AllOrdersScreen(navController: NavController) {
                     ) {
                         Text("${filtered.size} pesanan", fontSize = 14.sp, color = NeutralMidGray)
 
-                        // ✅ FIX: Urutkan dropdown berfungsi
                         Row(
                             modifier = Modifier.clickable { showSortMenu = true },
                             verticalAlignment = Alignment.CenterVertically
@@ -246,7 +251,7 @@ private fun OrderCard(order: OrderSummary, onClick: () -> Unit) {
             HorizontalDivider(color = NeutralDivider)
             Spacer(Modifier.height(10.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("HPP: Rp ${formatRupiah(order.hpp)}", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = NeutralBlack)
+                Text("HPP: Rp ${localFormatRupiah(order.hpp)}", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = NeutralBlack)
                 Text("Detail →", fontSize = 14.sp, color = TealPrimary, fontWeight = FontWeight.Medium)
             }
         }
@@ -255,7 +260,20 @@ private fun OrderCard(order: OrderSummary, onClick: () -> Unit) {
 
 @Composable
 fun OrderDetailScreen(navController: NavController, orderId: Long) {
-    val order = mockOrders.find { it.id == orderId } ?: return
+    val context = LocalContext.current
+    val repository = remember { OrderRepository.getInstance(context) }
+
+    val ordersList by repository.ordersFlow.collectAsState()
+    val order = ordersList.find { it.id == orderId }
+
+    var showStatusDialog by remember { mutableStateOf(false) }
+
+    if (order == null) {
+        LaunchedEffect(Unit) {
+            navController.popBackStack()
+        }
+        return
+    }
 
     Scaffold(
         containerColor = NeutralBackground,
@@ -263,7 +281,6 @@ fun OrderDetailScreen(navController: NavController, orderId: Long) {
             KmTopBar(title = "Detail Pesanan", onBackClick = { navController.popBackStack() })
         },
         bottomBar = {
-            // ✅ FIX: background putih agar tidak transparan ke footer
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -271,26 +288,50 @@ fun OrderDetailScreen(navController: NavController, orderId: Long) {
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Kirim ke Supplier
-                Button(
-                    onClick = { navController.navigate(Screen.SendToSupplier.createRoute(orderId)) },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = TealPrimary),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Icon(Icons.Default.ChatBubble, null, modifier = Modifier.size(20.dp), tint = NeutralWhite)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Kirim ke Supplier", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = NeutralWhite)
+                when (order.status.lowercase()) {
+                    "menunggu" -> {
+                        Button(
+                            onClick = { navController.navigate(Screen.SendToSupplier.createRoute(orderId)) },
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = TealPrimary),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Icon(Icons.Default.ChatBubble, null, modifier = Modifier.size(20.dp), tint = NeutralWhite)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Kirim ke Supplier", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = NeutralWhite)
+                        }
+
+                        Button(
+                            onClick = { repository.updateOrderStatus(orderId, "konfirmasi") },
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = StatusGreen),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Icon(Icons.Default.Check, null, modifier = Modifier.size(20.dp), tint = NeutralWhite)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Konfirmasi Pesanan", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = NeutralWhite)
+                        }
+                    }
+                    "konfirmasi" -> {
+                        KmSecondaryButton(
+                            text = "Pasang Pengingat Kalender",
+                            onClick = { navController.navigate(Screen.CalendarReminder.createRoute(orderId, order.menuName)) },
+                            icon = Icons.Default.DateRange
+                        )
+
+                        Button(
+                            onClick = { repository.updateOrderStatus(orderId, "selesai") },
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = TealPrimary),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(20.dp), tint = NeutralWhite)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Tandai Pesanan Selesai", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = NeutralWhite)
+                        }
+                    }
                 }
 
-                // Pasang Pengingat Kalender
-                KmSecondaryButton(
-                    text = "Pasang Pengingat Kalender",
-                    onClick = { navController.navigate(Screen.CalendarReminder.createRoute(orderId, order.menuName)) },
-                    icon = Icons.Default.DateRange
-                )
-
-                // ✅ FIX: Tombol "Kembali ke Beranda" (bukan hanya "Kembali")
                 Button(
                     onClick = {
                         navController.navigate(Screen.Dashboard.route) {
@@ -315,9 +356,22 @@ fun OrderDetailScreen(navController: NavController, orderId: Long) {
         ) {
             item {
                 KmCard {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Status Pesanan", fontSize = 14.sp, color = NeutralMidGray)
-                        KmOrderStatusChip(order.status)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Status Pesanan", fontSize = 14.sp, color = NeutralMidGray)
+                            Spacer(Modifier.height(2.dp))
+                            Text("Ketuk untuk mengubah manual", fontSize = 11.sp, color = TealPrimary)
+                        }
+                        Surface(
+                            modifier = Modifier.clickable { showStatusDialog = true },
+                            color = androidx.compose.ui.graphics.Color.Transparent
+                        ) {
+                            KmOrderStatusChip(order.status)
+                        }
                     }
                     Spacer(Modifier.height(16.dp))
                     DetailRow("Pelanggan",     order.customerName)
@@ -327,11 +381,42 @@ fun OrderDetailScreen(navController: NavController, orderId: Long) {
                     HorizontalDivider(color = NeutralDivider, modifier = Modifier.padding(vertical = 8.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("Total HPP", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = NeutralBlack)
-                        Text("Rp ${formatRupiah(order.hpp)}", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = TealPrimary)
+                        Text("Rp ${localFormatRupiah(order.hpp)}", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = TealPrimary)
                     }
                 }
             }
         }
+    }
+
+    if (showStatusDialog) {
+        AlertDialog(
+            onDismissRequest = { showStatusDialog = false },
+            title = { Text("Ubah Status Pesanan", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val statuses = listOf("menunggu", "konfirmasi", "selesai", "batal")
+                    statuses.forEach { status ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    repository.updateOrderStatus(orderId, status)
+                                    showStatusDialog = false
+                                }
+                                .padding(vertical = 12.dp, horizontal = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            KmOrderStatusChip(status)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showStatusDialog = false }) {
+                    Text("Tutup", color = NeutralMidGray)
+                }
+            }
+        )
     }
 }
 
@@ -344,4 +429,8 @@ private fun DetailRow(label: String, value: String) {
         Text(label, fontSize = 15.sp, color = NeutralMidGray)
         Text(value, fontSize = 15.sp, color = NeutralBlack, fontWeight = FontWeight.Medium)
     }
+}
+
+private fun localFormatRupiah(amount: Long): String {
+    return String.format("%,d", amount).replace(',', '.')
 }

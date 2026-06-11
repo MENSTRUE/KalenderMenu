@@ -1,8 +1,10 @@
 package com.plenger.kalendermenu.ui.screens.aiRecommendation
 
 import android.content.Context
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.plenger.kalendermenu.ml.PriceMapper
 import com.plenger.kalendermenu.ml.RecipeSearch
 import com.plenger.kalendermenu.ml.TfliteHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,14 +22,16 @@ data class MenuRecommendation(
     val menuName: String,
     val hppPerPortion: Long,
     val totalHpp: Long,
-    val keyIngredients: List<String>
+    val ingredients: List<String>
 )
 
 data class AiRecommendationUiState(
-    val budgetInput: String = "900000",
+    val budgetInput: String = "",
     val portions: Int = 50,
+    val date: String = "",
+    val customerName: String = "",
+    val selectedTheme: String = "Bebas",
     val isSearching: Boolean = false,
-    val isModelReady: Boolean = false,
     val recommendations: List<MenuRecommendation> = emptyList(),
     val errorMessage: String? = null
 )
@@ -36,29 +40,40 @@ data class AiRecommendationUiState(
 class AiRecommendationViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val recipeSearch: RecipeSearch,
-    private val tfliteHelper: TfliteHelper
+    private val tfliteHelper: TfliteHelper,
+    private val priceMapper: PriceMapper,
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(AiRecommendationUiState())
-    val uiState: StateFlow<AiRecommendationUiState> = _uiState.asStateFlow()
-
-    init {
-        viewModelScope.launch(Dispatchers.IO) {
-            val ready = tryInitModel()
-            _uiState.update { it.copy(isModelReady = ready) }
-        }
+    companion object {
+        private const val MIN_HPP_PER_PORSI = 1_000L
     }
+
+    private val _uiState = MutableStateFlow(
+        AiRecommendationUiState(
+            portions = savedStateHandle.get<Int>("portions") ?: 50,
+            date = savedStateHandle.get<String>("date") ?: "",
+            customerName = savedStateHandle.get<String>("customerName") ?: "Pelanggan",
+            budgetInput = savedStateHandle.get<String>("budget") ?: "",
+            selectedTheme = savedStateHandle.get<String>("theme") ?: "Bebas"
+        )
+    )
+    val uiState: StateFlow<AiRecommendationUiState> = _uiState.asStateFlow()
 
     fun onBudgetChange(value: String) {
         _uiState.update { it.copy(budgetInput = value, errorMessage = null) }
+        savedStateHandle["budget"] = value
+    }
+
+    fun onThemeChange(theme: String) {
+        _uiState.update { it.copy(selectedTheme = theme, errorMessage = null) }
+        savedStateHandle["theme"] = theme
     }
 
     fun findBestMenus() {
-        val budget  = _uiState.value.budgetInput.toLongOrNull() ?: 0L
-        val portions = _uiState.value.portions
-
+        val budget = _uiState.value.budgetInput.toLongOrNull() ?: 0L
         if (budget <= 0L) {
-            _uiState.update { it.copy(errorMessage = "Masukkan budget yang valid terlebih dahulu.") }
+            _uiState.update { it.copy(errorMessage = "Masukkan budget yang valid.") }
             return
         }
 
@@ -66,135 +81,66 @@ class AiRecommendationViewModel @Inject constructor(
             _uiState.update { it.copy(isSearching = true, recommendations = emptyList(), errorMessage = null) }
 
             val results = withContext(Dispatchers.IO) {
-                runRecommendation(budget, portions)
-            }
+                val porsi = _uiState.value.portions
+                val tema = _uiState.value.selectedTheme
 
-            if (results.isEmpty()) {
-                _uiState.update {
-                    it.copy(
-                        isSearching  = false,
-                        errorMessage = "Tidak ada menu yang sesuai budget Rp ${formatBudget(budget)}. Coba naikkan budget."
-                    )
-                }
-            } else {
-                _uiState.update { it.copy(isSearching = false, recommendations = results) }
-            }
-        }
-    }
-
-    private fun runRecommendation(budget: Long, portions: Int): List<MenuRecommendation> {
-        // 1. Ambil kandidat dari database JSON
-        val candidates = try {
-            recipeSearch.getTopRecipes(50)   // ambil 50 kandidat
-        } catch (e: Exception) {
-            emptyList()
-        }
-
-        if (candidates.isNotEmpty()) {
-            val scored = candidates.mapNotNull { recipe ->
-                // ── Bersihkan nama menu dari karakter aneh ─────────
-                val cleanName = recipe.namaMenu
-                    .replace(Regex("""[^\w\s\-+&()]"""), "")   // hapus karakter aneh
-                    .replace(Regex("""\\u[0-9a-fA-F]{4}"""), "") // hapus unicode escape
-                    .trim()
-                    .replaceFirstChar { it.uppercase() }
-
-                if (cleanName.isBlank()) return@mapNotNull null
-
-                // ── Prediksi HPP ───────────────────────────────────
-                val totalHpp = try {
-                    if (_uiState.value.isModelReady) {
-                        tfliteHelper.predictHpp(recipe.teks, portions).toLong()
-                            .coerceIn(100_000L, 5_000_000L)
-                    } else {
-                        estimateHpp(recipe.bahan, portions)
-                    }
-                } catch (e: Exception) {
-                    estimateHpp(recipe.bahan, portions)
+                val candidates = try {
+                    recipeSearch.getRecipesByTheme(tema, porsi)
+                } catch (_: Exception) {
+                    emptyList()
                 }
 
-                if (totalHpp > budget) return@mapNotNull null
+                candidates
+                    .mapNotNull { recipe ->
+                        val rawTotalHpp = recipe.bahan.sumOf { bahan ->
+                            val basePrice = if (bahan.jumlah.isNotEmpty()) {
+                                priceMapper.hitungHargaBahan(bahan.nama, bahan.jumlah)
+                            } else {
+                                priceMapper.hitungHargaBahanRaw(bahan.nama)
+                            }
+                            basePrice * porsi
+                        }
 
-                MenuRecommendation(
-                    menuName       = cleanName,
-                    hppPerPortion  = if (portions > 0) totalHpp / portions else 0L,
-                    totalHpp       = totalHpp,
-                    keyIngredients = recipe.bahan.take(3).map { b ->
-                        b.nama.replaceFirstChar { it.uppercase() }
+                        val totalHpp = if (rawTotalHpp < (porsi * 2000L)) (rawTotalHpp * 1.15).toLong() else rawTotalHpp
+
+                        if (totalHpp <= 0L) return@mapNotNull null
+
+                        val hppPerPorsi = totalHpp / porsi
+
+                        if (hppPerPorsi < MIN_HPP_PER_PORSI) return@mapNotNull null
+                        if (totalHpp !in 1..budget) return@mapNotNull null
+
+                        MenuRecommendation(
+                            menuName = recipe.namaMenu,
+                            hppPerPortion = hppPerPorsi,
+                            totalHpp = totalHpp,
+                            ingredients = recipe.bahan.map { "${it.nama}: ${it.jumlah}" }
+                        )
                     }
+                    .distinctBy { rec ->
+                        rec.menuName.lowercase()
+                            .replace(Regex("\\b(dan|dengan|serta|plus)\\b"), "")
+                            .replace(Regex("\\s+"), " ")
+                            .trim()
+                    }
+                    .sortedByDescending { it.totalHpp }
+                    .take(10)
+            }
+
+            _uiState.update {
+                it.copy(
+                    isSearching = false,
+                    recommendations = results,
+                    errorMessage = if (results.isEmpty())
+                        "Tidak ada menu yang cocok untuk budget Rp ${String.format("%,d", budget).replace(',', '.')} dengan ${_uiState.value.portions} porsi."
+                    else null
                 )
             }
-            .filter { it.menuName.length >= 3 }      // filter nama terlalu pendek
-            .sortedBy { it.totalHpp }
-            .take(3)
-
-            if (scored.isNotEmpty()) return scored
         }
-
-        // 2. Fallback ke data hardcode yang benar (bukan kambing semua)
-        return fallbackRecommendation(budget, portions)
     }
-
-    private fun estimateHpp(bahan: List<RecipeSearch.BahanItem>, portions: Int): Long {
-        val hargaRef = mapOf(
-            "daging sapi"   to 130000L,
-            "daging kambing" to 110000L,
-            "ayam"          to  35000L,
-            "udang"         to  80000L,
-            "ikan"          to  45000L,
-            "santan"        to  18000L,
-            "beras"         to  14000L,
-            "nasi"          to  14000L,
-            "cabai"         to  45000L,
-            "bawang merah"  to  32000L,
-            "bawang putih"  to  28000L,
-            "telur"         to  28000L,
-            "tempe"         to   8000L,
-            "tahu"          to   6000L,
-            "kentang"       to  15000L,
-            "wortel"        to  10000L,
-            "tepung"        to  12000L,
-            "minyak"        to  16000L
-        )
-        var total = 0L
-        bahan.forEach { b ->
-            val key   = b.nama.lowercase()
-            val harga = hargaRef.entries
-                .firstOrNull { (k, _) -> key.contains(k) }?.value ?: 8000L
-            val angka = Regex("""(\d+(?:\.\d+)?)""")
-                .find(b.jumlah)?.groupValues?.get(1)?.toDoubleOrNull() ?: 1.0
-            total += (harga * angka / 10.0).toLong()
-        }
-        return (total * portions / 10L).coerceIn(200_000L, 5_000_000L)
-    }
-
-    private fun fallbackRecommendation(budget: Long, portions: Int): List<MenuRecommendation> {
-        val allMenus = listOf(
-            MenuRecommendation("Ayam Bakar Kecap",   14800L, 14800L * portions, listOf("Ayam", "Kecap Manis", "Bawang Putih")),
-            MenuRecommendation("Nasi Gudeg Komplit",  15200L, 15200L * portions, listOf("Nangka", "Santan", "Telur")),
-            MenuRecommendation("Soto Ayam Lamongan",  17600L, 17600L * portions, listOf("Ayam", "Kunyit", "Lontong")),
-            MenuRecommendation("Opor Ayam",           13500L, 13500L * portions, listOf("Ayam", "Santan", "Serai")),
-            MenuRecommendation("Rendang Sapi",        17500L, 17500L * portions, listOf("Daging Sapi", "Santan", "Cabai")),
-            MenuRecommendation("Nasi Kotak Ayam",     15000L, 15000L * portions, listOf("Ayam", "Nasi", "Tempe")),
-            MenuRecommendation("Capcay Sayuran",       8500L,  8500L * portions, listOf("Wortel", "Kol", "Bakso")),
-            MenuRecommendation("Nasi Uduk Komplit",   12000L, 12000L * portions, listOf("Beras", "Santan", "Serai")),
-        )
-        return allMenus
-            .filter { it.totalHpp <= budget }
-            .sortedBy { it.totalHpp }
-            .take(3)
-    }
-
-    private fun tryInitModel(): Boolean = try {
-        tfliteHelper.predictHpp("ayam sapi santan cabai", 1)
-        true
-    } catch (e: Exception) { false }
-
-    private fun formatBudget(amount: Long): String =
-        String.format("%,d", amount).replace(',', '.')
 
     override fun onCleared() {
         super.onCleared()
-        tfliteHelper.close()
+        try { tfliteHelper.close() } catch (_: Exception) {}
     }
 }

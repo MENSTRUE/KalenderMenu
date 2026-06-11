@@ -39,9 +39,12 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.plenger.kalendermenu.data.OrderSummary
 import com.plenger.kalendermenu.ui.components.KmBottomNavBar
 import com.plenger.kalendermenu.ui.components.KmSectionHeader
 import com.plenger.kalendermenu.ui.components.KmTopBar
+import com.plenger.kalendermenu.ui.dashboard.DashboardUiState
+import com.plenger.kalendermenu.ui.dashboard.DashboardViewModel
 import com.plenger.kalendermenu.ui.navigation.Screen
 import com.plenger.kalendermenu.ui.theme.NeutralBackground
 import com.plenger.kalendermenu.ui.theme.NeutralBlack
@@ -107,21 +110,27 @@ fun DashboardScreen(
                 Spacer(Modifier.height(16.dp))
                 QuickActionRow(
                     onAddOrderClick = { navController.navigate(Screen.NewOrder.route) },
-                    onInvoiceHistoryClick = { navController.navigate(Screen.AllOrders.route) }
+                    onInvoiceHistoryClick = {
+
+                        navController.navigate(Screen.AllOrders.route) {
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
                 )
             }
 
             item {
                 Spacer(Modifier.height(20.dp))
                 KmSectionHeader(
-                    title = "Jadwal Minggu Ini",
-                    actionText = "Lihat Semua ",
-                    onActionClick = { navController.navigate(Screen.AllOrders.route) }
+                    title = if (uiState.isFilterWeekly) "Jadwal Minggu Ini" else "Semua Jadwal",
+                    actionText = if (uiState.isFilterWeekly) "Lihat Semua " else "Lebih Sedikit ",
+                    onActionClick = { viewModel.toggleFilter() }
                 )
                 Spacer(Modifier.height(8.dp))
             }
 
-            items(uiState.weeklyOrders) { order ->
+            items(uiState.recentOrders) { order ->
                 WeeklyScheduleItem(
                     order = order,
                     onClick = { navController.navigate(Screen.OrderDetail.createRoute(order.id)) }
@@ -137,13 +146,15 @@ private fun UpcomingOrderCard(
     state: DashboardUiState,
     onDetailClick: (Long) -> Unit
 ) {
+    val upcomingOrder = state.recentOrders.firstOrNull()
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(TealPrimary)
-            .clickable { state.upcomingOrder?.let { onDetailClick(it.id) } }
+            .clickable { upcomingOrder?.let { onDetailClick(it.id) } }
             .padding(20.dp)
     ) {
         Column {
@@ -165,9 +176,9 @@ private fun UpcomingOrderCard(
 
             Spacer(Modifier.height(10.dp))
 
-            if (state.upcomingOrder != null) {
+            if (upcomingOrder != null) {
                 Text(
-                    text = state.upcomingOrder.dateFormatted,
+                    text = upcomingOrder.dateFormatted,
                     color = NeutralWhite,
                     fontWeight = FontWeight.Bold,
                     fontSize = 26.sp,
@@ -175,12 +186,12 @@ private fun UpcomingOrderCard(
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "${state.upcomingOrder.customerName} · ${state.upcomingOrder.portions} Porsi",
+                    text = "${upcomingOrder.customerName} · ${upcomingOrder.portions} Porsi",
                     color = NeutralWhite.copy(alpha = 0.9f),
                     fontSize = 16.sp
                 )
                 Text(
-                    text = state.upcomingOrder.menuName,
+                    text = upcomingOrder.menuName,
                     color = NeutralWhite.copy(alpha = 0.85f),
                     fontSize = 15.sp
                 )
@@ -196,7 +207,7 @@ private fun UpcomingOrderCard(
                         color = TealDark
                     ) {
                         Text(
-                            text = "HPP: Rp ${formatRupiah(state.upcomingOrder.hpp)}",
+                            text = "HPP: Rp ${formatRupiah(upcomingOrder.hpp)}",
                             color = NeutralWhite,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
@@ -312,8 +323,7 @@ private fun WeeklyScheduleItem(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Memanggil CustomDateBadge yang dibuat khusus di file ini
-            CustomDateBadge(dayLabel = order.dayLabel, dayNumber = order.dayNumber)
+            CustomDateBadge(dayLabel = order.dayShort, dayNumber = order.dateNumber)
 
             Spacer(Modifier.width(14.dp))
 
@@ -329,8 +339,8 @@ private fun WeeklyScheduleItem(
                     .size(10.dp)
                     .clip(RoundedCornerShape(50))
                     .background(
-                        when (order.status) {
-                            "konfirmasi" -> StatusGreen
+                        when (order.status.lowercase()) {
+                            "konfirmasi", "selesai" -> StatusGreen
                             "menunggu" -> StatusOrange
                             else -> NeutralLightGray
                         }
@@ -340,28 +350,27 @@ private fun WeeklyScheduleItem(
     }
 }
 
-// Ini adalah komponen custom pengganti KmDateBadge khusus untuk mengatasi masalah UI kamu
 @Composable
 private fun CustomDateBadge(dayLabel: String, dayNumber: String) {
     Column(
         modifier = Modifier
             .width(52.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(TealPrimary) // Menggunakan warna hijau tosca yang sama dengan desain
-            .padding(vertical = 10.dp), // Ini yang bikin kotak melebar simetris ke atas dan bawah
+            .background(TealPrimary)
+            .padding(vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Text(
             text = dayLabel,
-            color = NeutralWhite, // Teks hari (SEL, RAB) diubah paksa jadi putih
+            color = NeutralWhite,
             fontSize = 11.sp,
             fontWeight = FontWeight.Medium
         )
         Spacer(Modifier.height(2.dp))
         Text(
             text = dayNumber,
-            color = NeutralWhite, // Teks angka diubah jadi putih
+            color = NeutralWhite,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold
         )

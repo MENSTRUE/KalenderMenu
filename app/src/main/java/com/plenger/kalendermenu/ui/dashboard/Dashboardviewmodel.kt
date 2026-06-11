@@ -1,87 +1,69 @@
-package com.plenger.kalendermenu.ui.screens.dashboard
+package com.plenger.kalendermenu.ui.dashboard
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.plenger.kalendermenu.data.OrderRepository
+import com.plenger.kalendermenu.data.OrderSummary
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import javax.inject.Inject
 
-data class OrderSummary(
-    val id: Long,
-    val customerName: String,
-    val menuName: String,
-    val portions: Int,
-    val hpp: Long,
-    val dateFormatted: String,
-    val dayLabel: String,
-    val dayNumber: String,
-    val status: String
-)
-
 data class DashboardUiState(
-    val upcomingOrder: OrderSummary? = null,
-    val weeklyOrders: List<OrderSummary> = emptyList(),
-    val isLoading: Boolean = false
+    val recentOrders: List<OrderSummary> = emptyList(),
+    val isFilterWeekly: Boolean = true
 )
 
 @HiltViewModel
-class DashboardViewModel @Inject constructor() : ViewModel() {
+class DashboardViewModel @Inject constructor(
+    @ApplicationContext private val context: Context
+) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(DashboardUiState(isLoading = true))
+    private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
-    init {
-        loadDashboard()
-    }
+    private val repository = OrderRepository.getInstance(context)
 
-    private fun loadDashboard() {
+    init {
         viewModelScope.launch {
-            val mockOrders = listOf(
-                OrderSummary(
-                    id = 1L,
-                    customerName = "Ibu Hartini",
-                    menuName = "Nasi Gudeg + Ayam Bakar",
-                    portions = 50,
-                    hpp = 875000,
-                    dateFormatted = "Selasa, 24 Juni 2026",
-                    dayLabel = "SEL",
-                    dayNumber = "24",
-                    status = "konfirmasi"
-                ),
-                OrderSummary(
-                    id = 2L,
-                    customerName = "Pak Ahmad",
-                    menuName = "Nasi Kotak Ayam",
-                    portions = 80,
-                    hpp = 1200000,
-                    dateFormatted = "Rabu, 25 Juni 2026",
-                    dayLabel = "RAB",
-                    dayNumber = "25",
-                    status = "menunggu"
-                ),
-                OrderSummary(
-                    id = 3L,
-                    customerName = "Bu Siti",
-                    menuName = "Rendang Sapi",
-                    portions = 30,
-                    hpp = 620000,
-                    dateFormatted = "Jumat, 27 Juni 2026",
-                    dayLabel = "JUM",
-                    dayNumber = "27",
-                    status = "konfirmasi"
-                )
-            )
-            _uiState.update {
-                it.copy(
-                    upcomingOrder = mockOrders.first(),
-                    weeklyOrders = mockOrders,
-                    isLoading = false
-                )
+            repository.ordersFlow.collect { orders ->
+                refreshOrders(orders)
             }
         }
+    }
+
+    fun toggleFilter() {
+        val currentFilter = _uiState.value.isFilterWeekly
+        _uiState.update { it.copy(isFilterWeekly = !currentFilter) }
+        refreshOrders(repository.ordersFlow.value)
+    }
+
+    private fun refreshOrders(allOrders: List<OrderSummary>) {
+        val formatter = DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale("id", "ID"))
+
+        val sortedOrders = allOrders.filter {
+            it.status.lowercase() != "selesai" && it.status.lowercase() != "batal"
+        }.sortedBy {
+            try {
+                LocalDate.parse(it.dateFormatted, formatter)
+            } catch (_: Exception) {
+                LocalDate.MAX
+            }
+        }
+
+        val filtered = if (_uiState.value.isFilterWeekly) {
+            sortedOrders.take(3)
+        } else {
+            sortedOrders
+        }
+        _uiState.update { it.copy(recentOrders = filtered) }
     }
 }

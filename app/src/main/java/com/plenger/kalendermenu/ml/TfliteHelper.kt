@@ -9,32 +9,27 @@ import java.nio.channels.FileChannel
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * TfliteHelper
- * Load: assets/kalendermenu_hpp_model.tflite
- *       assets/kalendermenu_vocab.json
- *
- * Input  : teks bahan baku (Indonesian)
- * Output : prediksi HPP (Rupiah)
- */
 @Singleton
 class TfliteHelper @Inject constructor(
     private val context: Context
 ) {
 
     companion object {
-        private const val MODEL_FILE  = "kalendermenu_hpp_model.tflite"
-        private const val VOCAB_FILE  = "kalendermenu_vocab.json"
+        private const val MODEL_FILE = "kalendermenu_hpp_model.tflite"
+        private const val VOCAB_FILE = "kalendermenu_vocab.json"
         private const val MAX_SEQ_LEN = 100
-        private const val PAD_INDEX   = 0
+        private const val PAD_INDEX = 0
     }
 
-    // ── Lazy init — tidak pakai by lazy untuk hindari delegate error ──
     private var _interpreter: Interpreter? = null
     private val interpreter: Interpreter
         get() {
             if (_interpreter == null) {
                 _interpreter = Interpreter(loadModel())
+                try {
+                    _interpreter!!.resizeInput(0, intArrayOf(1, MAX_SEQ_LEN))
+                    _interpreter!!.allocateTensors()
+                } catch (_: Exception) {}
             }
             return _interpreter!!
         }
@@ -48,31 +43,29 @@ class TfliteHelper @Inject constructor(
             return _vocab!!
         }
 
-    // ─────────────────────────────────────────────────────────────
-    // PUBLIC API
-    // ─────────────────────────────────────────────────────────────
-
-    /**
-     * Prediksi HPP total dari teks bahan.
-     * @param text  contoh: "daging sapi 5kg santan 3liter cabai 500gr"
-     * @param porsi jumlah porsi
-     * @return      total HPP dalam Rupiah
-     */
     fun predictHpp(text: String, porsi: Int = 50): Float {
-        val input  = tokenize(text)
-        val output = Array(1) { FloatArray(1) }
-        interpreter.run(input, output)
-        val raw = output[0][0]
+        val input = tokenize(text)
+        var hppBase = 0f
 
-        // De-normalisasi: sesuaikan dengan skala training kamu
-        // Kalau model output 0-1, multiply ke range Rupiah
-        // Kalau model sudah output Rupiah langsung, hapus multiply
-        return raw * 50_000f * porsi
+        try {
+            val output = Array(1) { FloatArray(1) }
+            interpreter.run(input, output)
+            hppBase = output[0][0]
+        } catch (e1: IllegalArgumentException) {
+            try {
+                val output1D = FloatArray(1)
+                interpreter.run(input, output1D)
+                hppBase = output1D[0]
+            } catch (e2: Exception) {
+                hppBase = 0f
+            }
+        } catch (e: Exception) {
+            hppBase = 0f
+        }
+
+        return (hppBase / 4f) * porsi.toFloat()
     }
 
-    /**
-     * Batch prediction untuk AI recommendation.
-     */
     fun predictHppBatch(texts: List<String>, porsi: Int = 50): List<Float> =
         texts.map { predictHpp(it, porsi) }
 
@@ -81,37 +74,33 @@ class TfliteHelper @Inject constructor(
         _interpreter = null
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // PRIVATE HELPERS
-    // ─────────────────────────────────────────────────────────────
-
     private fun loadModel(): MappedByteBuffer {
-        val fd      = context.assets.openFd(MODEL_FILE)
-        val stream  = FileInputStream(fd.fileDescriptor)
+        val fd = context.assets.openFd(MODEL_FILE)
+        val stream = FileInputStream(fd.fileDescriptor)
         val channel = stream.channel
         return channel.map(FileChannel.MapMode.READ_ONLY, fd.startOffset, fd.declaredLength)
     }
 
     private fun loadVocab(): Map<String, Int> {
-        val text  = context.assets.open(VOCAB_FILE).bufferedReader().use { it.readText() }
-        val arr   = JSONArray(text)
-        val map   = mutableMapOf<String, Int>()
+        val text = context.assets.open(VOCAB_FILE).bufferedReader().use { it.readText() }
+        val arr = JSONArray(text)
+        val map = mutableMapOf<String, Int>()
         for (i in 0 until arr.length()) {
-            map[arr.getString(i)] = i + 1   // 0 = PAD
+            map[arr.getString(i)] = i + 1
         }
         return map
     }
 
-    private fun tokenize(text: String): Array<IntArray> {
+    private fun tokenize(text: String): Array<FloatArray> {
         val tokens = text
             .lowercase()
             .replace(Regex("[^a-z0-9 ]"), " ")
             .split(Regex("\\s+"))
             .filter { it.isNotBlank() }
-            .map { vocab[it] ?: PAD_INDEX }
+            .map { (vocab[it] ?: PAD_INDEX).toFloat() }
             .take(MAX_SEQ_LEN)
 
-        val padded = IntArray(MAX_SEQ_LEN) { PAD_INDEX }
+        val padded = FloatArray(MAX_SEQ_LEN) { PAD_INDEX.toFloat() }
         tokens.forEachIndexed { i, v -> padded[i] = v }
         return arrayOf(padded)
     }

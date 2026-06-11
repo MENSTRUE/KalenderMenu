@@ -1,5 +1,6 @@
 package com.plenger.kalendermenu.ui.screens.splash
 
+import android.content.Context
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -24,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -31,18 +33,18 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.plenger.kalendermenu.ui.navigation.Screen
 import com.plenger.kalendermenu.ui.theme.NeutralWhite
-import com.plenger.kalendermenu.ui.theme.TealDark
 import com.plenger.kalendermenu.ui.theme.TealPrimary
 import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(navController: NavController) {
+    val context = LocalContext.current
+    val sharedPrefs = remember { context.getSharedPreferences("kalendermenu_prefs", Context.MODE_PRIVATE) }
 
     val scale = remember { Animatable(0f) }
     val alpha = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {
-        // Animasi masuk: logo muncul + fade in
         scale.animateTo(
             targetValue = 1f,
             animationSpec = tween(700, easing = FastOutSlowInEasing)
@@ -53,8 +55,10 @@ fun SplashScreen(navController: NavController) {
         )
         delay(1500L)
 
-        // Navigasi ke Login
-        navController.navigate(Screen.Login.route) {
+        val isLoggedIn = sharedPrefs.getBoolean("is_logged_in", false)
+        val destination = if (isLoggedIn) Screen.Dashboard.route else Screen.Login.route
+
+        navController.navigate(destination) {
             popUpTo(Screen.Splash.route) { inclusive = true }
         }
     }
@@ -69,7 +73,6 @@ fun SplashScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Logo icon
             Box(
                 modifier = Modifier
                     .size(100.dp)
@@ -88,7 +91,6 @@ fun SplashScreen(navController: NavController) {
 
             Spacer(Modifier.height(20.dp))
 
-            // App name
             Text(
                 text = "KalenderMenu",
                 color = NeutralWhite,
@@ -99,7 +101,6 @@ fun SplashScreen(navController: NavController) {
 
             Spacer(Modifier.height(6.dp))
 
-            // Tagline
             Text(
                 text = "Kelola katering. Lebih cepat.",
                 color = NeutralWhite.copy(alpha = 0.75f),
@@ -110,7 +111,6 @@ fun SplashScreen(navController: NavController) {
 
             Spacer(Modifier.height(60.dp))
 
-            // Version
             Text(
                 text = "v1.0",
                 color = NeutralWhite.copy(alpha = 0.45f),

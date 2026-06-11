@@ -58,29 +58,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
+import com.plenger.kalendermenu.data.OrderRepository
 import com.plenger.kalendermenu.ui.components.KmCard
 import com.plenger.kalendermenu.ui.components.KmIngredientChip
 import com.plenger.kalendermenu.ui.components.KmSecondaryButton
 import com.plenger.kalendermenu.ui.components.KmTopBar
 import com.plenger.kalendermenu.ui.components.KmWhatsAppButton
 import com.plenger.kalendermenu.ui.navigation.Screen
-import com.plenger.kalendermenu.ui.theme.NeutralBackground
-import com.plenger.kalendermenu.ui.theme.NeutralBlack
-import com.plenger.kalendermenu.ui.theme.NeutralDivider
-import com.plenger.kalendermenu.ui.theme.NeutralLightGray
-import com.plenger.kalendermenu.ui.theme.NeutralMidGray
-import com.plenger.kalendermenu.ui.theme.NeutralSurface
-import com.plenger.kalendermenu.ui.theme.NeutralWhite
-import com.plenger.kalendermenu.ui.theme.StatusGreen
-import com.plenger.kalendermenu.ui.theme.StatusGreenLight
-import com.plenger.kalendermenu.ui.theme.TealContainer
-import com.plenger.kalendermenu.ui.theme.TealPrimary
+import com.plenger.kalendermenu.ui.theme.*
 
-// ─── Data supplier ────────────────────────────────────────────────
 data class SupplierData(
     val nama: String,
     val lokasi: String,
-    val nomorWa: String   // format: 628xxxxxxx (tanpa + dan -)
+    val nomorWa: String
 )
 
 @Composable
@@ -88,48 +78,51 @@ fun SendToSupplierScreen(
     navController: NavController,
     orderId: Long
 ) {
-    val context          = LocalContext.current
+    val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
-    val scrollState      = rememberScrollState()
+    val scrollState = rememberScrollState()
 
-    // ── Supplier list — bisa ditambah ────────────────────────────
+    val repository = remember { OrderRepository.getInstance(context) }
+    val order = remember(orderId) { repository.getOrderById(orderId) }
+
+    val menuName = order?.menuName ?: "Menu Belum Dipilih"
+    val ingredients = order?.ingredients ?: emptyList()
+
     val supplierList = remember {
         listOf(
-            SupplierData("Pak Budi",    "Pasar Tradisional",  "6281234567890"),
-            SupplierData("Bu Wati",     "Pasar Modern",       "6281398765432"),
-            SupplierData("Pak Slamet",  "Distributor Bahan",  "6281112345678"),
+            SupplierData("Pak Muflihin", "Pasar Tradisional", "6285648804502"),
+            SupplierData("Pak Wowo", "Pasar Modern", "62881036850480"),
+            SupplierData("Pak Cesar", "Distributor Bahan", "6285156461831")
         )
     }
 
-    // ── State ─────────────────────────────────────────────────────
-    var selectedSupplier  by remember { mutableStateOf(supplierList[0]) }
+    var selectedSupplier by remember { mutableStateOf(supplierList[0]) }
     var showSupplierPicker by remember { mutableStateOf(false) }
-    var showCopiedSnack    by remember { mutableStateOf(false) }
-
-    val menuName  = "Rendang Sapi"
-    val portions  = 50
+    var showCopiedSnack by remember { mutableStateOf(false) }
 
     val draftMessage = buildString {
-        appendLine("Halo ${selectedSupplier.nama} \uD83D\uDC4B")
-        appendLine("Saya mau pesan bahan untuk")
-        appendLine("*$portions porsi $menuName:*")
-        appendLine("• Daging Sapi: 5 kg")
-        appendLine("• Santan: 3 liter")
-        appendLine("• Cabai Merah: 500 gr")
-        appendLine("• Serai: 10 batang")
-        appendLine("• Bawang Merah: 300 gr")
+        appendLine("Halo ${selectedSupplier.nama} 👋")
+        appendLine("Saya mau pesan bahan untuk *Menu $menuName*:")
+        if (ingredients.isNotEmpty()) {
+            ingredients.forEach { item ->
+                appendLine("• $item")
+            }
+        } else {
+            appendLine("• Bahan Baku Utama")
+            appendLine("• Bumbu Dasar & Rempah")
+        }
         appendLine()
-        appendLine("Mohon info harga hari ini.")
-        append("Terima kasih \uD83D\uDE4F")
+        appendLine("Mohon info rincian harganya untuk hari ini.")
+        append("Terima kasih 🙏")
     }
 
     Scaffold(
         containerColor = NeutralBackground,
         topBar = {
             KmTopBar(
-                title         = "Kirim ke Supplier",
-                onBackClick   = { navController.popBackStack() },
-                actionIcon    = Icons.Outlined.ChatBubbleOutline,
+                title = "Kirim ke Supplier",
+                onBackClick = { navController.popBackStack() },
+                actionIcon = Icons.Outlined.ChatBubbleOutline,
                 onActionClick = {}
             )
         },
@@ -141,35 +134,32 @@ fun SendToSupplierScreen(
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // ✅ Buka WhatsApp ke nomor supplier yang dipilih
                 KmWhatsAppButton(
-                    text    = "Buka WhatsApp & Kirim",
+                    text = "Buka WhatsApp & Kirim",
                     onClick = {
-                        val phone   = selectedSupplier.nomorWa
+                        val phone = selectedSupplier.nomorWa
                         val encoded = Uri.encode(draftMessage)
-                        val intent  = Intent(
+                        val intent = Intent(
                             Intent.ACTION_VIEW,
-                            Uri.parse("https://wa.me/$phone?text=$encoded")
+                            Uri.parse("https://api.whatsapp.com/send?phone=$phone&text=$encoded")
                         )
                         context.startActivity(intent)
                     }
                 )
 
-                // Kembali
                 Button(
                     onClick = { navController.popBackStack() },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
-                    colors   = ButtonDefaults.buttonColors(containerColor = TealPrimary),
-                    shape    = RoundedCornerShape(16.dp)
+                    colors = ButtonDefaults.buttonColors(containerColor = TealPrimary),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
                     Text("Kembali", color = NeutralWhite, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
 
-                // Update harga
                 KmSecondaryButton(
-                    text    = "Update Harga dari Supplier",
-                    onClick = { navController.navigate(Screen.UpdateIngredientPrice.createRoute(1L)) },
-                    icon    = Icons.Default.Edit
+                    text = "Update Harga dari Supplier",
+                    onClick = { navController.navigate(Screen.UpdateIngredientPrice.createRoute(orderId)) },
+                    icon = Icons.Default.Edit
                 )
             }
         }
@@ -182,8 +172,6 @@ fun SendToSupplierScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
-            // ── Draf pesan ────────────────────────────────────────
             KmCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Outlined.Receipt, null, tint = TealPrimary, modifier = Modifier.size(20.dp))
@@ -191,10 +179,7 @@ fun SendToSupplierScreen(
                     Text("Draf Pesan Belanja", fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = NeutralBlack)
                 }
                 Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    KmIngredientChip(name = "$portions Porsi")
-                    KmIngredientChip(name = menuName)
-                }
+                KmIngredientChip(name = menuName)
                 Spacer(Modifier.height(12.dp))
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -202,10 +187,10 @@ fun SendToSupplierScreen(
                     color = NeutralBackground
                 ) {
                     Text(
-                        text       = draftMessage,
-                        modifier   = Modifier.padding(14.dp),
-                        fontSize   = 15.sp,
-                        color      = NeutralBlack,
+                        text = draftMessage,
+                        modifier = Modifier.padding(14.dp),
+                        fontSize = 15.sp,
+                        color = NeutralBlack,
                         lineHeight = 22.sp
                     )
                 }
@@ -234,7 +219,6 @@ fun SendToSupplierScreen(
                 }
             }
 
-            // ── Supplier terpilih ─────────────────────────────────
             KmCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Outlined.Person, null, tint = TealPrimary, modifier = Modifier.size(20.dp))
@@ -274,7 +258,6 @@ fun SendToSupplierScreen(
                         }
                     }
 
-                    // ✅ FIX: Tombol Ganti buka dialog
                     OutlinedButton(
                         onClick = { showSupplierPicker = true },
                         shape = RoundedCornerShape(20.dp),
@@ -287,7 +270,6 @@ fun SendToSupplierScreen(
                 }
             }
 
-            // ── Copy success ──────────────────────────────────────
             if (showCopiedSnack) {
                 Card(
                     shape = RoundedCornerShape(12.dp),
@@ -307,13 +289,12 @@ fun SendToSupplierScreen(
         }
     }
 
-    // ── Dialog pilih supplier ─────────────────────────────────────
     if (showSupplierPicker) {
         SupplierPickerDialog(
-            suppliers       = supplierList,
+            suppliers = supplierList,
             selectedSupplier = selectedSupplier,
-            onSelect        = { supplier ->
-                selectedSupplier  = supplier
+            onSelect = { supplier ->
+                selectedSupplier = supplier
                 showSupplierPicker = false
             },
             onDismiss = { showSupplierPicker = false }
@@ -321,9 +302,6 @@ fun SendToSupplierScreen(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Dialog Pilih Supplier
-// ─────────────────────────────────────────────────────────────────
 @Composable
 private fun SupplierPickerDialog(
     suppliers: List<SupplierData>,
@@ -331,14 +309,10 @@ private fun SupplierPickerDialog(
     onSelect: (SupplierData) -> Unit,
     onDismiss: () -> Unit
 ) {
-    // ── State untuk tambah supplier baru ─────────────────────────
-    var showAddForm  by remember { mutableStateOf(false) }
-    var newNama      by remember { mutableStateOf("") }
-    var newLokasi    by remember { mutableStateOf("") }
-    var newNomor     by remember { mutableStateOf("") }
-    val allSuppliers = remember { suppliers.toMutableList() }.also { list ->
-        // tambah dari form kalau ada
-    }
+    var showAddForm by remember { mutableStateOf(false) }
+    var newNama by remember { mutableStateOf("") }
+    var newLokasi by remember { mutableStateOf("") }
+    var newNomor by remember { mutableStateOf("") }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -391,7 +365,6 @@ private fun SupplierPickerDialog(
                     HorizontalDivider(color = NeutralDivider, modifier = Modifier.padding(vertical = 4.dp))
                 }
 
-                // ── Form tambah supplier baru ─────────────────────
                 if (showAddForm) {
                     Spacer(Modifier.height(8.dp))
                     Text("Tambah Supplier Baru", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = TealPrimary)

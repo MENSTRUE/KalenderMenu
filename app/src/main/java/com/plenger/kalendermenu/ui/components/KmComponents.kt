@@ -86,23 +86,16 @@ import com.plenger.kalendermenu.ui.theme.TealContainer
 import com.plenger.kalendermenu.ui.theme.TealLight
 import com.plenger.kalendermenu.ui.theme.TealPrimary
 
-// ─────────────────────────────────────────────────────────────────
-// KmTopBar — FIX: header tidak terpotong, hamburger + notif berfungsi
-// ─────────────────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KmTopBar(
     title: String,
-    // Untuk dashboard: hamburger + notif
     onMenuClick: (() -> Unit)? = null,
     onNotificationClick: (() -> Unit)? = null,
-    // Untuk sub-screen: back button
     onBackClick: (() -> Unit)? = null,
-    // Action kanan opsional
     actionIcon: ImageVector? = null,
     onActionClick: (() -> Unit)? = null
 ) {
-    // State untuk drawer dan notification dialog
     var showDrawer by remember { mutableStateOf(false) }
     var showNotifDialog by remember { mutableStateOf(false) }
 
@@ -115,7 +108,6 @@ fun KmTopBar(
                 color = if (onBackClick == null) TealPrimary else NeutralBlack
             )
         },
-        // Navigasi kiri: hamburger (dashboard) atau back (sub-screen)
         navigationIcon = {
             if (onBackClick != null) {
                 IconButton(onClick = onBackClick) {
@@ -127,7 +119,6 @@ fun KmTopBar(
                 }
             }
         },
-        // Action kanan: notifikasi (dashboard) atau custom icon
         actions = {
             if (onNotificationClick != null) {
                 IconButton(onClick = { showNotifDialog = true }) {
@@ -150,20 +141,15 @@ fun KmTopBar(
         )
     )
 
-    // ── Side Drawer Dialog ─────────────────────────────────────────
     if (showDrawer) {
         KmDrawerDialog(onDismiss = { showDrawer = false })
     }
 
-    // ── Notifikasi Dialog ─────────────────────────────────────────
     if (showNotifDialog) {
         KmNotificationDialog(onDismiss = { showNotifDialog = false })
     }
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Side Drawer Dialog
-// ─────────────────────────────────────────────────────────────────
 @Composable
 private fun KmDrawerDialog(onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
@@ -175,7 +161,6 @@ private fun KmDrawerDialog(onDismiss: () -> Unit) {
             colors = CardDefaults.cardColors(containerColor = NeutralWhite)
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                // Header
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
@@ -232,9 +217,6 @@ private fun KmDrawerDialog(onDismiss: () -> Unit) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Notification Dialog
-// ─────────────────────────────────────────────────────────────────
 @Composable
 private fun KmNotificationDialog(onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
@@ -279,9 +261,6 @@ private fun KmNotificationDialog(onDismiss: () -> Unit) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Bottom Navigation Bar (tidak berubah)
-// ─────────────────────────────────────────────────────────────────
 @Composable
 fun KmBottomNavBar(
     selectedRoute: String,
@@ -325,10 +304,6 @@ data class BottomNavItem(
     val selectedIcon: ImageVector,
     val route: String
 )
-
-// ─────────────────────────────────────────────────────────────────
-// Remaining reusable components (tidak berubah dari aslinya)
-// ─────────────────────────────────────────────────────────────────
 
 @Composable
 fun KmPrimaryButton(

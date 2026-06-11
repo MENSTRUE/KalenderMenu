@@ -1,5 +1,6 @@
 package com.plenger.kalendermenu.ui.screens.profile
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,14 +18,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.outlined.Help
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Group
-import androidx.compose.material.icons.outlined.Help
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Notifications
@@ -47,6 +47,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,11 +58,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
+import com.plenger.kalendermenu.data.OrderRepository
 import com.plenger.kalendermenu.ui.components.KmBottomNavBar
 import com.plenger.kalendermenu.ui.components.KmTopBar
 import com.plenger.kalendermenu.ui.navigation.Screen
@@ -79,36 +80,30 @@ import com.plenger.kalendermenu.ui.theme.StatusRed
 import com.plenger.kalendermenu.ui.theme.TealContainer
 import com.plenger.kalendermenu.ui.theme.TealPrimary
 
-// ─── Data pesanan untuk stats ─────────────────────────────────────
-private val allOrders = listOf(
-    Triple("Ibu Hartini", "konfirmasi", 875000L),
-    Triple("Pak Ahmad",   "menunggu",   1200000L),
-    Triple("Bu Siti",     "konfirmasi", 620000L),
-)
-private val totalPesanan = allOrders.size                              // 3
-private val totalLunas   = allOrders.count { it.second == "konfirmasi" } // 2
-private val totalPending = allOrders.count { it.second == "menunggu" }   // 1
-
 @Composable
 fun ProfileScreen(navController: NavController) {
     val context = LocalContext.current
+    val repository = remember { OrderRepository.getInstance(context) }
 
-    // ── Toggle states ─────────────────────────────────────────────
-    var notifEnabled     by remember { mutableStateOf(true) }
-    var calendarEnabled  by remember { mutableStateOf(true) }
+    val ordersList by repository.ordersFlow.collectAsState()
 
-    // ── Dialog states ─────────────────────────────────────────────
-    var showEditProfilDialog   by remember { mutableStateOf(false) }
-    var showSupplierDialog     by remember { mutableStateOf(false) }
-    var showHelpDialog         by remember { mutableStateOf(false) }
-    var showPrivacyDialog      by remember { mutableStateOf(false) }
-    var showAboutDialog        by remember { mutableStateOf(false) }
-    var showLogoutDialog       by remember { mutableStateOf(false) }
+    val totalPesanan = ordersList.size
+    val totalLunas = ordersList.count { it.status.lowercase() == "konfirmasi" || it.status.lowercase() == "selesai" }
+    val totalPending = ordersList.count { it.status.lowercase() == "menunggu" }
 
-    // ── Profile editable state ────────────────────────────────────
-    var profileName    by remember { mutableStateOf("Ibu Sari Wahyuni") }
+    var notifEnabled by remember { mutableStateOf(true) }
+    var calendarEnabled by remember { mutableStateOf(true) }
+
+    var showEditProfilDialog by remember { mutableStateOf(false) }
+    var showSupplierDialog by remember { mutableStateOf(false) }
+    var showHelpDialog by remember { mutableStateOf(false) }
+    var showPrivacyDialog by remember { mutableStateOf(false) }
+    var showAboutDialog by remember { mutableStateOf(false) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
+
+    var profileName by remember { mutableStateOf("Ibu Sari Wahyuni") }
     var profileBusiness by remember { mutableStateOf("Katering Sari Rasa") }
-    var profileCity    by remember { mutableStateOf("Ponorogo, Jawa Timur") }
+    var profileCity by remember { mutableStateOf("Ponorogo, Jawa Timur") }
     val profileInitial = profileName.split(" ")
         .take(2).mapNotNull { it.firstOrNull()?.uppercaseChar() }.joinToString("")
 
@@ -119,7 +114,7 @@ fun ProfileScreen(navController: NavController) {
                 title = "Profil Saya",
                 onMenuClick = {},
                 actionIcon = Icons.Default.Edit,
-                onActionClick = { showEditProfilDialog = true }  // ✅ FIX: tombol edit profil (pena)
+                onActionClick = { showEditProfilDialog = true }
             )
         },
         bottomBar = {
@@ -142,7 +137,6 @@ fun ProfileScreen(navController: NavController) {
         ) {
             item { Spacer(Modifier.height(2.dp)) }
 
-            // ── Profile Header ────────────────────────────────────
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
@@ -173,7 +167,6 @@ fun ProfileScreen(navController: NavController) {
 
                         Spacer(Modifier.height(16.dp))
 
-                        // ✅ FIX: Stats dari data nyata, bukan hardcode
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -186,21 +179,16 @@ fun ProfileScreen(navController: NavController) {
                 }
             }
 
-            // ── USAHA SAYA ────────────────────────────────────────
             item {
                 ProfileSection(title = "USAHA SAYA") {
-                    // ✅ FIX: edit profil usaha
                     ProfileMenuItem(Icons.Outlined.Person, "Edit Profil Usaha", onClick = { showEditProfilDialog = true })
-                    // ✅ FIX: daftar supplier
                     ProfileMenuItem(Icons.Outlined.Group, "Daftar Supplier", onClick = { showSupplierDialog = true })
-                    // ✅ FIX: riwayat invoice → navigate ke AllOrders
                     ProfileMenuItem(Icons.Outlined.Receipt, "Riwayat Invoice", onClick = {
                         navController.navigate(Screen.AllOrders.route) {
                             popUpTo(Screen.Dashboard.route) { saveState = true }
                             launchSingleTop = true
                         }
                     })
-                    // ✅ FIX: kelola harga bahan → navigate ke IngredientPriceList
                     ProfileMenuItem(Icons.Outlined.Sell, "Kelola Harga Bahan", onClick = {
                         navController.navigate(Screen.IngredientPriceList.route) {
                             popUpTo(Screen.Dashboard.route) { saveState = true }
@@ -210,27 +198,21 @@ fun ProfileScreen(navController: NavController) {
                 }
             }
 
-            // ── PENGATURAN ────────────────────────────────────────
             item {
                 ProfileSection(title = "PENGATURAN") {
                     ProfileToggleItem(Icons.Outlined.Notifications, "Notifikasi & Pengingat",
                         notifEnabled, { notifEnabled = it })
                     ProfileToggleItem(Icons.Outlined.DateRange, "Sinkronisasi Google Calendar",
                         calendarEnabled, { calendarEnabled = it })
-                    // ✅ FIX: bantuan & FAQ
-                    ProfileMenuItem(Icons.Outlined.Help, "Bantuan & FAQ", onClick = { showHelpDialog = true })
+                    ProfileMenuItem(Icons.AutoMirrored.Outlined.Help, "Bantuan & FAQ", onClick = { showHelpDialog = true })
                 }
             }
 
-            // ── LAINNYA ───────────────────────────────────────────
             item {
                 ProfileSection(title = "LAINNYA") {
-                    // ✅ FIX: kebijakan privasi
                     ProfileMenuItem(Icons.Outlined.Shield, "Kebijakan Privasi", onClick = { showPrivacyDialog = true })
-                    // ✅ FIX: tentang aplikasi
                     ProfileMenuItem(Icons.Outlined.Info, "Tentang Aplikasi", onClick = { showAboutDialog = true })
-                    // ✅ FIX: keluar → konfirmasi dulu
-                    ProfileMenuItem(Icons.Default.Logout, "Keluar", onClick = { showLogoutDialog = true }, isDestructive = true)
+                    ProfileMenuItem(Icons.AutoMirrored.Filled.Logout, "Keluar", onClick = { showLogoutDialog = true }, isDestructive = true)
                 }
             }
 
@@ -245,15 +227,10 @@ fun ProfileScreen(navController: NavController) {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // DIALOGS
-    // ─────────────────────────────────────────────────────────────
-
-    // ✅ Edit Profil Usaha
     if (showEditProfilDialog) {
-        var editName     by remember { mutableStateOf(profileName) }
+        var editName by remember { mutableStateOf(profileName) }
         var editBusiness by remember { mutableStateOf(profileBusiness) }
-        var editCity     by remember { mutableStateOf(profileCity) }
+        var editCity by remember { mutableStateOf(profileCity) }
         Dialog(onDismissRequest = { showEditProfilDialog = false }) {
             Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = NeutralWhite)) {
                 Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -282,12 +259,11 @@ fun ProfileScreen(navController: NavController) {
         }
     }
 
-    // ✅ Daftar Supplier
     if (showSupplierDialog) {
         val suppliers = listOf(
-            Triple("Pak Budi", "Pasar Tradisional", "+62 812-3456-7890"),
-            Triple("Bu Wati",  "Pasar Modern",       "+62 813-9876-5432"),
-            Triple("Pak Slamet","Distributor",        "+62 811-2345-6789")
+            Triple("Pak Muflihin", "Pasar Tradisional", "+62 856-4880-4502"),
+            Triple("Pak Wowo",  "Pasar Modern",       "+62 881-0368-50480"),
+            Triple("Pak Cesar","Distributor",        "+62 851-5646-1831")
         )
         Dialog(onDismissRequest = { showSupplierDialog = false }) {
             Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = NeutralWhite)) {
@@ -317,7 +293,6 @@ fun ProfileScreen(navController: NavController) {
         }
     }
 
-    // ✅ Bantuan & FAQ
     if (showHelpDialog) {
         AlertDialog(
             onDismissRequest = { showHelpDialog = false },
@@ -346,7 +321,6 @@ fun ProfileScreen(navController: NavController) {
         )
     }
 
-    // ✅ Kebijakan Privasi
     if (showPrivacyDialog) {
         AlertDialog(
             onDismissRequest = { showPrivacyDialog = false },
@@ -354,9 +328,9 @@ fun ProfileScreen(navController: NavController) {
             text = {
                 Text(
                     "KalenderMenu menghormati privasi Anda. Data pesanan dan kontak supplier " +
-                    "tersimpan hanya di perangkat Anda. Kami tidak menjual atau membagikan " +
-                    "data pribadi kepada pihak ketiga. Sinkronisasi Google Calendar memerlukan " +
-                    "izin akses kalender yang dapat dicabut kapan saja di pengaturan perangkat.",
+                            "tersimpan hanya di perangkat Anda. Kami tidak menjual atau membagikan " +
+                            "data pribadi kepada pihak ketiga. Sinkronisasi Google Calendar memerlukan " +
+                            "izin akses kalender yang dapat dicabut kapan saja di pengaturan perangkat.",
                     fontSize = 14.sp, color = NeutralMidGray, lineHeight = 22.sp
                 )
             },
@@ -369,7 +343,6 @@ fun ProfileScreen(navController: NavController) {
         )
     }
 
-    // ✅ Tentang Aplikasi
     if (showAboutDialog) {
         AlertDialog(
             onDismissRequest = { showAboutDialog = false },
@@ -393,7 +366,6 @@ fun ProfileScreen(navController: NavController) {
         )
     }
 
-    // ✅ Keluar — konfirmasi dulu
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
@@ -402,8 +374,11 @@ fun ProfileScreen(navController: NavController) {
             confirmButton = {
                 Button(
                     onClick = {
+                        context.getSharedPreferences("kalendermenu_prefs", Context.MODE_PRIVATE)
+                            .edit()
+                            .putBoolean("is_logged_in", false)
+                            .apply()
                         showLogoutDialog = false
-                        // Tutup semua activity
                         (context as? android.app.Activity)?.finishAffinity()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = StatusRed)
@@ -417,10 +392,6 @@ fun ProfileScreen(navController: NavController) {
         )
     }
 }
-
-// ─────────────────────────────────────────────────────────────────
-// COMPOSABLE HELPERS
-// ─────────────────────────────────────────────────────────────────
 
 @Composable
 private fun StatChip(label: String, bg: androidx.compose.ui.graphics.Color, textColor: androidx.compose.ui.graphics.Color, modifier: Modifier = Modifier) {
